@@ -27,7 +27,7 @@ async def root():
     )
     return fastapi.responses.HTMLResponse(content=body)
 
-@app.post("/users/{username},{password}")
+@app.post("/users")
 async def sign_up(username: str, password: str):
     if {"username":username,"password":password} in tmp_user_database:
         return {"message":"username already exists"}
