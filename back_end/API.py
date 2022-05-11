@@ -1,5 +1,4 @@
 #WORK IN PROGRESS
-import json
 import fastapi
 from pydantic import HttpUrl, Json
 
@@ -16,6 +15,8 @@ tmp_matches_database=[{"name":"Francia-Croazia","link":"","score":"4-2","usernam
 
 requested_match_set=set("Italia-Inghilterra")
 
+online_user_set=set()
+
 @app.get("/")
 async def root():
     body=(
@@ -27,32 +28,45 @@ async def root():
     )
     return fastapi.responses.HTMLResponse(content=body)
 
-@app.post("/users")
+@app.post("/users/{username}")
 async def sign_up(username: str, password: str):
+    """
+    Register a new user
+    """
     if {"username":username,"password":password} in tmp_user_database:
         return {"message":"username already exists"}
     tmp_user_database.append({"username":username,"password":password})
     return {"message":"user created succesfully!"}
 
-@app.get("/users/{username},{password}")
+@app.get("/users")
 async def login(username: str, password: str):
+    """
+    Log in a new User, if username doesen't exist or password is incorrect return error
+    """
     if {"username":username,"password":password} in tmp_user_database:
-        return {"message":"successful login!"}
+        return {"message":"successful login! e codice che identifica il ruolo"}
     return fastapi.responses.JSONResponse(content={"message":"username or password is incorrect"},status_code=400)
 
-@app.get("/users/{username}")
+@app.get("/users")
 async def logout(username: str):
-    #controllo su online_users
-    return {"message":"succesful logout!"}
+    """
+    Log out a User, if username is not online return error
+    """
+    if username in online_user_set:
+        return {"message":"succesful logout!"}
+    return fastapi.responses.JSONResponse(content={"message":"FATAL ERROR"},status_code=400)
 
 @app.get("/completed_matches")
-async def get_completed_mach_list():
+async def get_completed_match_list():
+    """
+    Get completed match list from db
+    """
     return tmp_completed_matches_database
 
-@app.get("/completed_matches/{match_name}/data")
+@app.get("/completed_matches/{match_name}")
 async def get_completed_data(match_name :str):
     """
-    Get completed match data from db
+    Get completed match data from db, if the match_name is incorrect return error
     """
     for elem in tmp_completed_matches_database:
         if elem["name"]==match_name:
@@ -61,11 +75,24 @@ async def get_completed_data(match_name :str):
 
 @app.post("/requested_matches/{match_name}")
 async def add_match_guest(match_name: str):
+    """
+    Add a match to the requested match set
+    """
     requested_match_set.add(match_name)
     return {"message":"match added succesfully!"}
 
+@app.get("/requested_matches")
+async def get_requested_match_list():
+    """
+    Get the requested_match list
+    """
+    return requested_match_set
+
 @app.get("/help")
 async def get_help():
+    """
+    Print helpful information
+    """
     body=(
         "<html>"
         "<body style='padding: 10px;'>"
@@ -77,38 +104,56 @@ async def get_help():
 
 @app.get("/matches")
 async def get_match_list():
+    """
+    Get the match list from db
+    """
     return tmp_matches_database
 
-@app.post("/matches/{match_name}/info/{username},{link}") #non funziona
+@app.post("/matches/{match_name}") #non funziona
 async def add_match(username: str,match_name: str, link: HttpUrl):
+    """
+    Add a new match to db
+    """
     tmp_matches_database.append({"name":match_name,"link":link,"username":username})
     return {"message":"match added successfully!"}
 
-@app.get("/matches/{match_name}/data")
+@app.get("/matches/{match_name}")
 async def get_data(match_name: str):
+    """
+    Get data of the match from db, if the match_name is incorrect return error
+    """
     for elem in tmp_matches_database:
         if elem["name"]==match_name:
             return elem
     return fastapi.responses.JSONResponse(content={"message":"match_name is incorrect"},status_code=400)
 
-@app.post("/matches/{match_name}/info/{new_match_name}")
+@app.post("/matches/{new_match_name}")
 async def change_match_name(match_name: str, new_match_name: str):
+    """
+    Change the name of the match, if the match_name is incorrect return error
+    """
     for elem in tmp_matches_database:
         if elem["name"]==match_name:
             elem.update({"name":new_match_name})
             return {"message":"Match updated successfully!"}
     return fastapi.responses.JSONResponse(content={"message":"match_name is incorrect"},status_code=400)
 
-@app.post("/matches/{match_name}/info/{link}")
+@app.post("/matches/{match_name}")
 async def change_match_link(match_name: str, link: HttpUrl):
+    """
+    Change the link of the match, if the match_name is incorrect return error
+    """
     for elem in tmp_matches_database:
         if elem["name"]==match_name:
             elem.update({"link":link})
             return {"message":"Match updated successfully!"}
     return fastapi.responses.JSONResponse(content={"message":"match_name is incorrect"},status_code=400)
 
-@app.post("/matches/{match_name}/{data_name}/{judgement}")
+@app.post("/matches/{match_name}/{data_name}")#/{judgement}
 async def validate_data(match_name: str,data_name: str,judgement: bool):
+    """
+    Add a new judgement to the match, if the match_name is incorrect return error
+    """
     for elem in tmp_matches_database:
         if elem["name"]==match_name:
             if judgement:
@@ -118,29 +163,41 @@ async def validate_data(match_name: str,data_name: str,judgement: bool):
             return {"message":"Match updated successfully!"}
     return fastapi.responses.JSONResponse(content={"message":"match_name is incorrect"},status_code=400)
 
-@app.get("/matches/{match_name}/info")
+@app.get("/matches/{match_name}")
 async def get_match_report(match_name: str):
+    """
+    Get the match report from db, if the match_name is incorrect return error
+    """
     for elem in tmp_matches_database:
         if elem["name"]==match_name:
             return elem["report"]
     return fastapi.responses.JSONResponse(content={"message":"match_name is incorrect"},status_code=400)
 
-@app.post("/matches/{match_name}/info/{report}")
+@app.post("/matches/{match_name}/{report}")
 async def add_match_report(match_name: str,match_report: Json):
+    """
+    Add the report to the match, if the match_name is incorrect return error
+    """
     for elem in tmp_matches_database:
         if elem["name"]==match_name:
             elem.update({"report":match_report})
     return fastapi.responses.JSONResponse(content={"message":"match_name is incorrect"},status_code=400)
 
-@app.get("/matches/{match_name}/info")
+@app.get("/matches/{match_name}")
 async def get_workers(match_name: str):
+    """
+    Get the wrokers set of the match from db, if the match_name is incorrect return error
+    """
     for elem in tmp_matches_database:
         if elem["name"]==match_name:
             return elem["name"]["workers"]
     return fastapi.responses.JSONResponse(content={"message":"match_name is incorrect"},status_code=400)
 
-@app.get("/matches/{match_name}/data")
+@app.get("/matches/{match_name}")
 async def get_free_time_slot(match_name: str):
+    """
+    Get the list of the free time slot of the match from db, if the match_name is incorrect return error
+    """
     for elem in tmp_matches_database:
         if elem["name"]==match_name:
             time_slot=list()
@@ -150,16 +207,22 @@ async def get_free_time_slot(match_name: str):
             return time_slot
     return fastapi.responses.JSONResponse(content={"message":"match_name is incorrect"},status_code=400)
 
-@app.post("/matches/{match_name}/data/{username},{time_slot_id}")
+@app.post("/matches/{match_name}/{time_slot_id}")
 async def analyze_time_slot(username: str,match_name: str,time_slot_id: str):
+    """
+    Signal the server that a user started processing the time slot, if the match_name is incorrect return error
+    """
     for elem in tmp_matches_database:
         if elem["name"]==match_name:
             elem["data"][time_slot_id]["working"]=username
             return {"message":"working set successfully!"}
     return fastapi.responses.JSONResponse(content={"message":"match_name is incorrect"},status_code=400)
 
-@app.post("/matches/{match_name}/data/{username},{time_slot_id},{result}")
+@app.post("/matches/{match_name}/{time_slot_id}")
 async def add_data(username: str,match_name: str,time_slot_id: str,result: Json):
+    """
+    Add the result of the analysis to the db, if the match_name is incorrect return error
+    """
     for elem in tmp_matches_database:
         if elem["name"]==match_name:
             elem["data"][time_slot_id]["working"]=""
@@ -168,8 +231,11 @@ async def add_data(username: str,match_name: str,time_slot_id: str,result: Json)
             return {"message":"match data updated successfully!"}
     return fastapi.responses.JSONResponse(content={"message":"match_name is incorrect"},status_code=400)
 
-@app.get("/matches/{match_id}/data")
+@app.get("/matches/{match_name}")
 async def read_journal(match_name: str):
+    """
+    Return the journal of the match, if the match_name is incorrect return error
+    """
     for elem in tmp_matches_database:
         if elem["name"]==match_name:
             return elem["journal"]
@@ -177,18 +243,27 @@ async def read_journal(match_name: str):
 
 @app.get("/users")
 async def get_user_list():
+    """
+    Get the user list from db, only administrators can call thi function
+    """
     return tmp_user_database
 
-@app.post("/rules/{new_value}")
+@app.post("/rules/N")
 async def change_N(new_value: int):
+    """
+    Change the value of N, it's not retroactive, if new_value is incorrect return error
+    """
     if new_value>len(tmp_user_database): 
         return fastapi.responses.JSONResponse(content={"message":"value is incorrect"},status_code=400)
     global n
     n=abs(new_value)
     return {"message":"N updated successfully!"}
 
-@app.post("/matches/{match_name}/info")
+@app.post("/matches/{match_name}")
 async def assess_name(match_name: str):
+    """
+    Confirm definitely the match name in the db, if the match_name is incorrect return error
+    """
     for elem in tmp_matches_database:
         if elem["name"]==match_name:
             return {"message":"match_name confirmed successfully!"}
