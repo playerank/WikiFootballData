@@ -8,7 +8,8 @@ To create a web platform accessible to all to share analytical football data whi
 # Description
 
 In this platform matches are divided into time slot so users can coopearate and split the work.
-Once the analysis of a time slot is completed it will be posted so other users will be able to see it and to judge it, since the subjective nature of some evaluations, if an analysis reaches a certain number of negative ratings it will be possible to remove and to post a new one.
+Once the analysis of a time slot is completed it will be posted to let other users see it and judge it, since the subjective nature of some evaluations,if the analysis reaches a certain number of negative ratings then it will be possible to remove it and to post a new one, otherwise the same number of positive ratings makes the analysis "confirmed".
+Once a match is entirely analyzed and the results "confirmed", the data created by registered users will be visible even by unregistered users.
 
 # Requirements
 
