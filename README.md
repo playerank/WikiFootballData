@@ -13,7 +13,7 @@ Once a match is entirely analyzed and the results "confirmed", the data created 
 
 # Requirements
 
-python version 3.10.4 or later (to verify installation $py --version)
+python version 3.10.4 or later (to verify installation ```sh $py --version```)
 
 # Author
 
