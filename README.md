@@ -3,7 +3,7 @@
 
 # Goal
 
-To create a web platform accessible to all to share analytical football data which are processed by users through the "soccerLogger" application (https://github.com/playerank/soccerLogger).
+To create a web platform accessible to all to share analytical football data which are processed by users through the [soccerLogger](https://github.com/playerank/soccerLogger)<br/> application.
 
 # Description
 
@@ -13,7 +13,7 @@ Once a match is entirely analyzed and the results "confirmed", the data created 
 
 # Requirements
 
-python version 3.10.4 or later (to verify installation ```sh $py --version```)
+python version 3.10.4 or later (to verify installation ```$py --version```)
 
 # Author
 
