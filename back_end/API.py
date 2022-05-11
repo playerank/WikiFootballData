@@ -51,6 +51,9 @@ async def get_completed_mach_list():
 
 @app.get("/completed_matches/{match_name}/data")
 async def get_completed_data(match_name :str):
+    """
+    Get completed match data from db
+    """
     for elem in tmp_completed_matches_database:
         if elem["name"]==match_name:
             return elem
