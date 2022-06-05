@@ -15,15 +15,6 @@ tmp_matches_database=[{"name":"Francia-Croazia","link":"","score":"4-2","usernam
 
 tmp_completed_matches_database=[{"name":"Francia-Argentina","score":"4-3","data":{"5'":{"analysis":"JsonDocument","endorse":10,"dislike":0},"10'":""}}]
 
-requested_match_set=set("Italia-Inghilterra")
-
-@router.get("")
-async def get_match_list():
-    """
-    Get the match list from db
-    """
-    return tmp_matches_database
-
 @router.get("/completed_matches")
 async def get_completed_match_list():
     """
@@ -41,26 +32,21 @@ async def get_completed_data(match_name :str):
             return elem
     return responses.JSONResponse(content={"message":"match_name is incorrect"},status_code=400)
 
-@router.get("/requested_matches")
-async def get_requested_match_list():
+@router.get("")
+async def get_match_list():
     """
-    Get the requested_match list
+    Get the match list from db
     """
-    return requested_match_set
-
-@router.post("/requested_matches/{match_name}")
-async def add_match_guest(match_name: str):
-    """
-    Add a match to the requested match set
-    """
-    requested_match_set.add(match_name)
-    return {"message":"match added succesfully!"}
+    return tmp_matches_database
 
 @router.post("/{match_name}") 
-async def add_match(username: str,match_name: str, link: HttpUrl):
+async def add_match(username: str,match_name: str, link: str):#HttpUrl):
     """
     Add a new match to db
     """
+    for match in tmp_matches_database:
+        if match["name"]==match_name:
+            return responses.JSONResponse(content={"message":"match already within the list"},status_code=400)
     tmp_matches_database.append({"name":match_name,"link":link,"username":username})
     return {"message":"match added successfully!"}
 
@@ -86,13 +72,24 @@ async def change_match_name(match_name: str, new_match_name: str):
     return responses.JSONResponse(content={"message":"match_name is incorrect"},status_code=400)
 
 @router.post("/{match_name}")
-async def change_match_link(match_name: str, link: HttpUrl):
+async def change_match_link(match_name: str, link: str):#HttpUrl):
     """
     Change the link of the match, if the match_name is incorrect return error
     """
     for elem in tmp_matches_database:
         if elem["name"]==match_name:
             elem.update({"link":link})
+            return {"message":"Match updated successfully!"}
+    return responses.JSONResponse(content={"message":"match_name is incorrect"},status_code=400)
+
+@router.post("/{match_name}")
+async def change_match_report(match_name: str, report: str):
+    """
+    Change the report of the match, if match_name is incorrect return error
+    """
+    for elem in tmp_matches_database:
+        if elem["name"]==match_name and elem["report"]!="":
+            elem.update({"report":report})
             return {"message":"Match updated successfully!"}
     return responses.JSONResponse(content={"message":"match_name is incorrect"},status_code=400)
 
@@ -120,8 +117,8 @@ async def get_match_report(match_name: str):
             return elem["report"]
     return responses.JSONResponse(content={"message":"match_name is incorrect"},status_code=400)
 
-@router.post("/{match_name}/{report}")
-async def add_match_report(match_name: str,match_report: Json):
+@router.post("/{match_name}/report")
+async def add_match_report(match_name: str,match_report: str):#Json):
     """
     Add the report to the match, if the match_name is incorrect return error
     """
@@ -166,7 +163,7 @@ async def analyze_time_slot(username: str,match_name: str,time_slot_id: str):
     return responses.JSONResponse(content={"message":"match_name is incorrect"},status_code=400)
 
 @router.post("/{match_name}/{time_slot_id}")
-async def add_data(username: str,match_name: str,time_slot_id: str,result: Json):
+async def add_data(username: str,match_name: str,time_slot_id: str,result: str):#Json):
     """
     Add the result of the analysis to the db, if the match_name is incorrect return error
     """
@@ -192,8 +189,73 @@ async def read_journal(match_name: str):
 async def assess_name(match_name: str):
     """
     Confirm definitely the match name in the db, if the match_name is incorrect return error
+    Only administrators or editors can call this function
     """
     for elem in tmp_matches_database:
         if elem["name"]==match_name:
+            elem.update({"is_confirmed":True})
             return {"message":"match_name confirmed successfully!"}
+    return responses.JSONResponse(content={"message":"match_name is incorrect"},status_code=400)
+
+@router.post("/{new_match_name}")
+async def modify_name(match_name: str,new_match_name: str):
+    """
+    Modify and confirm definitely the match name in the db, if the match_name is incorrect return error
+    Only administrators or editors can call this function
+    """
+    for elem in tmp_matches_database:
+        if elem["name"]==match_name:
+            elem.update({"name":new_match_name})
+            elem.update({"is_confirmed":True})
+            return {"message":"match_name updated and confirmed successfully!"}
+    return responses.JSONResponse(content={"message":"match_name is incorrect"},status_code=400)
+
+@router.post("/{match_name}")
+async def assess_link(match_name: str):
+    """
+    Confirm definitely the match link in the db, if the match_name is incorrect return error
+    Only administrators or editors can call this function
+    """
+    for elem in tmp_matches_database:
+        if elem["name"]==match_name:
+            elem.update({"link_is_confirmed":True})
+            return {"message":"link confirmed successfully!"}
+    return responses.JSONResponse(content={"message":"match_name is incorrect"},status_code=400)
+
+@router.post("/{match_name}")
+async def modify_link(match_name: str,link: str):
+    """
+    Modify and confirm definitely the match link in the db, if the match_name is incorrect return error
+    Only administrators or editors can call this function
+    """
+    for elem in tmp_matches_database:
+        if elem["name"]==match_name:
+            elem.update({"link":link})
+            elem.update({"link_is_confirmed":True})
+            return {"message":"link updated and confirmed successfully!"}
+    return responses.JSONResponse(content={"message":"match_name is incorrect"},status_code=400)
+
+@router.post("/{match_name}")
+async def assess_match_report(match_name: str):
+    """
+    Confirm definitely the match report in the db, if the match_name is incorrect return error
+    Only administrators or editors can call this function
+    """
+    for elem in tmp_matches_database:
+        if elem["name"]==match_name:
+            elem.update({"report_is_confirmed":True})
+            return {"message":"link confirmed successfully!"}
+    return responses.JSONResponse(content={"message":"match_name is incorrect"},status_code=400)
+
+@router.post("/{match_name}")
+async def modify_match_report(match_name: str,report: str):
+    """
+    Modify and confirm definitely the match report in the db, if the match_name is incorrect return error
+    Only administrators or editors can call this function
+    """
+    for elem in tmp_matches_database:
+        if elem["name"]==match_name:
+            elem.update({"report":report})
+            elem.update({"report_is_confirmed":True})
+            return {"message":"report updated and confirmed successfully!"}
     return responses.JSONResponse(content={"message":"match_name is incorrect"},status_code=400)
