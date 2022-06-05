@@ -1,6 +1,5 @@
-from fastapi import APIRouter, responses, Depends
+from fastapi import APIRouter, responses#, Depends
 #from .dependencies import get_token_header
-# from mainAPI import tmp_user_database
 
 router = APIRouter(
     prefix="/users",
@@ -8,8 +7,6 @@ router = APIRouter(
     #dependencies=[Depends(get_token_header)],
     #responses={404: {"description": "Not found"}},
 )
-
-n=5
 
 online_user_list=list()
 
@@ -50,16 +47,30 @@ async def logout(username: str):
             return {"message":"succesful logout!"}
     return responses.JSONResponse(content={"message":"FATAL ERROR"},status_code=400)
 
+@router.post("/{username}/role")
+async def add_editor(username: str):
+    """
+    Change user role to editor, if username is incorrect return error
+    Only administrators or editors can call this function
+    """
+    for user in tmp_user_database:
+        if user["username"]==username:
+            user.update["is_editor":True]
+            return {"message":"user role updated successfully!"}
+    return responses.JSONResponse(content={"message":"username is incorrect!"},status_code=400)
+
 @router.get("")
 async def get_user_list():
     """
-    Get the user list from db, only administrators can call this function
+    Get the user list from db
+    Only administrators can call this function
     """
     return tmp_user_database
 
 @router.get("/online")
-async def get_online_users():
+async def get_online_user_list():
     """
-    Get the online user list from db, only administrators can call this function
+    Get the online user list from db
+    Only administrators can call this function
     """
     return online_user_list
