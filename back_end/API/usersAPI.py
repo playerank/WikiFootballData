@@ -9,7 +9,6 @@ router = APIRouter(
 online_user_list=list()
 
 tmp_user_database=[{"username":"Dodo","password":"12"}]
-##RICORDARSI DI FARE LAVORI ESTETICI (come strip(), etc) IN FRONT END
 @router.post("/{username}")
 async def sign_up(username: str, password: str):
     """
@@ -19,7 +18,7 @@ async def sign_up(username: str, password: str):
     if existing_user:
         return responses.JSONResponse(content={"message":f"username {username} already exists"},status_code=400)
     new_user=svc.create_user(username,password)
-    return {"message":"user created succesfully!"}#id={new_user.id} debug
+    return {"message":"user created succesfully!"}
 
 @router.get("/login")
 async def login(username: str, password: str):
@@ -27,7 +26,6 @@ async def login(username: str, password: str):
     Log in a new User, if username doesen't exist or password is incorrect return error
     """
     response=svc.log_user(username, password)
-    #decidere se usare switch
     if response=="U":
         return responses.JSONResponse(content={"message":f"username {username} is incorrect"},status_code=400)
     if response=="P":
