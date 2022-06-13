@@ -1,15 +1,14 @@
-# from typing import Set
-from fastapi import FastAPI, responses
-#from .dependencies import get_query_token
+from fastapi import Depends, FastAPI, responses
+#from dependencies import get_current_username
 import usersAPI
 import matchesAPI
 import requested_matchesAPI
 import competitionsAPI
 import teamsAPI
 import playerAPI
-# from lib.user import User
+import data.mongo_setup as mongo_setup
 
-app = FastAPI()#dependencies=[Depends(get_query_token)])
+app = FastAPI()
 app.include_router(usersAPI.router)
 app.include_router(matchesAPI.router)
 app.include_router(requested_matchesAPI.router)
@@ -21,6 +20,10 @@ n=5
 
 #https://fastapi.tiangolo.com/tutorial/bigger-applications/
 #https://fastapi.tiangolo.com/tutorial/security/
+#ROBOMONGO sostituto di mongoDBcompass
+
+#cd '.\Progetto wikiFootballData\back_end\API'
+#uvicorn mainAPI:app --reload
 
 @app.get("/")
 async def root():
@@ -31,6 +34,7 @@ async def root():
         "</body>"
         "</html>"
     )
+    mongo_setup.global_init()
     return responses.HTMLResponse(content=body)
 
 @app.get("/help")
