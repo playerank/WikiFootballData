@@ -6,9 +6,7 @@ router = APIRouter(
     tags=["users"]
 )
 
-online_user_list=list()
-
-tmp_user_database=[{"username":"Dodo","password":"12"}]
+##RICORDARSI DI FARE LAVORI ESTETICI (come strip(), etc) anche hash della password si può fare IN FRONT END
 @router.post("/{username}")
 async def sign_up(username: str, password: str):
     """
@@ -18,7 +16,7 @@ async def sign_up(username: str, password: str):
     if existing_user:
         return responses.JSONResponse(content={"message":f"username {username} already exists"},status_code=400)
     new_user=svc.create_user(username,password)
-    return {"message":"user created succesfully!"}
+    return {"message":"user created succesfully!"}#id={new_user.id} debug
 
 @router.get("/login")
 async def login(username: str, password: str):
@@ -26,6 +24,7 @@ async def login(username: str, password: str):
     Log in a new User, if username doesen't exist or password is incorrect return error
     """
     response=svc.log_user(username, password)
+    #decidere se usare switch
     if response=="U":
         return responses.JSONResponse(content={"message":f"username {username} is incorrect"},status_code=400)
     if response=="P":
@@ -52,24 +51,27 @@ async def add_editor(username: str):
     Change user role to editor, if username is incorrect return error
     Only administrators or editors can call this function
     """
-    for user in tmp_user_database:
-        if user["username"]==username:
-            user.update["is_editor":True]
-            return {"message":"user role updated successfully!"}
-    return responses.JSONResponse(content={"message":"username is incorrect!"},status_code=400)
+    #controllo dell'user
+    if not svc.add_editor(username):
+        return responses.JSONResponse(content={"message":"username is incorrect!"},status_code=400)
+    return {"message": f"user {username} role updated successfully!"}
 
 @router.get("")
 async def get_user_list():
     """
-    Get the user list from db
+    Get the user list from db, the return is in raw format(a list of user object)
     Only administrators can call this function
     """
-    return tmp_user_database
+    #controllo dell'user
+    users=svc.get_users()
+    return users
 
 @router.get("/online")
 async def get_online_user_list():
     """
-    Get the online user list from db
+    Get the online user list from db, the return is in raw format(a list of user object)
     Only administrators can call this function
     """
+    #controllo dell'user
+    online_user_list=svc.get_online_users()
     return online_user_list
