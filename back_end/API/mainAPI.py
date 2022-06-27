@@ -1,4 +1,5 @@
 from fastapi import Depends, FastAPI, responses
+#from dependencies import get_current_username
 import usersAPI
 import matchesAPI
 import requested_matchesAPI
@@ -16,6 +17,13 @@ app.include_router(teamsAPI.router)
 app.include_router(playerAPI.router)
 
 n=5
+
+#https://fastapi.tiangolo.com/tutorial/bigger-applications/
+#https://fastapi.tiangolo.com/tutorial/security/
+#ROBOMONGO sostituto di mongoDBcompass
+
+#cd '.\Progetto wikiFootballData\back_end\API'
+#uvicorn mainAPI:app --reload
 
 @app.get("/")
 async def root():
