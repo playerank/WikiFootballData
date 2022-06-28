@@ -2,6 +2,7 @@ from typing import List
 from data.users import User
 from data.requested_matches import Requested_match
 from data.competitions import Competition
+from data.teams import Team
 
 #USERS_API TESTED
 
@@ -73,7 +74,7 @@ def get_online_users() -> List[User]:
 
 #REQUESTED_MATCHES_API TESTED
 
-def add_r_match(ht: str,at: str,cn: str,sn: str) -> int:
+def add_r_match(ht: str,at: str,cn: str,sn: str) -> bool:
     existing_r_match: Requested_match=Requested_match.objects() \
         .filter(home_team=ht) \
         .filter(away_team=at) \
@@ -83,14 +84,14 @@ def add_r_match(ht: str,at: str,cn: str,sn: str) -> int:
     if existing_r_match:
         #debug
         # print("Match esistente {} - {}, {} {}".format(existing_r_match.home_team,existing_r_match.away_team,existing_r_match.competition_name,existing_r_match.season_name))
-        return 1
+        return False
     r_match=Requested_match()
     r_match.home_team=ht
     r_match.away_team=at
     r_match.competition_name=cn
     r_match.season_name=sn
     r_match.save()
-    return 0
+    return True
 
 def get_requested_matches() -> List[Requested_match]:
     r_matches:List[Requested_match]=list(Requested_match.objects().all())
@@ -112,16 +113,19 @@ def get_competitions() -> List[Competition]:
     #     print("Competizione {}, codice {}, confermata? {}".format(c.competition_name,c.competition_code,c.is_confirmed))
     return competitions
 
-def add_competition(competition_name: str) -> int:
+def add_competition(competition_name: str) -> bool:
+    """
+    Return True if operation succeeded, False otherwise
+    """
     e_competition=get_competition(competition_name)
     if e_competition:
         #debug
         # print("Competizione esistente {}, codice {}, confermata? {}".format(e_competition.competition_name,e_competition.competition_code,e_competition.is_confirmed))
-        return 1
+        return False
     competition=Competition()
     competition.competition_name=competition_name
     competition.save()
-    return 0
+    return True
 
 def change_competition_name(competition_name: str, new_competition_name: str) -> int:
     competition=get_competition(competition_name)
@@ -141,14 +145,70 @@ def assess_competition(competition_name: str, competition_code: str) -> int:
     competition.update(competition_code=competition_code,is_confirmed=True)
     return 0
 
-def modify_competition(competition_name: str, new_competition_name: str, new_competition_code: str) -> int:
+def modify_competition(competition_name: str, new_competition_name: str, new_competition_code: str) -> bool:
+    """
+    Return True if operation succeeded, False otherwise
+    """
     competition=get_competition(competition_name)
     if not competition:
-        return 1
+        return False
     if new_competition_name==" ":
         competition.update(competition_code=new_competition_code)
     elif new_competition_code==" ":
         competition.update(competition_name=new_competition_name)
     else:
         competition.update(competition_name=new_competition_name, competition_code=new_competition_code)
+    return True
+
+#TEAMS_API
+
+def get_team(team_name: str) -> Team:
+    team: Team=Team.objects(team_name=team_name).first()
+    return team
+
+def get_teams() -> List[Team]:
+    teams:List[Team]=list(Team.objects().all())
+    #debug
+    # for t in teams:
+    #     print("Squadra {}, confermata? {}".format(t.team_name,t.is_confirmed))
+    return teams
+
+def add_team(team_name: str) -> bool:
+    """
+    Return True if operation succeeded, False otherwise
+    """
+    e_team=get_team(team_name)
+    if e_team:
+        return False
+    team=Team()
+    team.team_name=team_name
+    team.save()
+    return True
+
+def change_team_name(team_name: str, new_team_name: str) -> int:
+    team=get_team(team_name)
+    if not team:
+        return 1
+    if team.is_confirmed:
+        return 2
+    team.update(team_name=new_team_name)
     return 0
+
+def assess_team(team_name: str) -> int:
+    team=get_team(team_name)
+    if not team:
+        return 1
+    if team.is_confirmed:
+        return 2
+    team.update(is_confirmed=True)
+    return 0
+
+def modify_team(team_name: str, new_team_name: str) -> bool:
+    """
+    Return True if operation succeeded, False otherwise
+    """
+    team=get_team(team_name)
+    if not team:
+        return False
+    team.update(team_name=new_team_name, is_confirmed=True)
+    return True
