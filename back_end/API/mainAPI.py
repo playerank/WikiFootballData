@@ -18,6 +18,13 @@ app.include_router(playerAPI.router)
 
 n=5
 
+#https://fastapi.tiangolo.com/tutorial/bigger-applications/
+#https://fastapi.tiangolo.com/tutorial/security/
+#ROBOMONGO sostituto di mongoDBcompass
+
+#cd '.\Progetto wikiFootballData\back_end\API'
+#uvicorn mainAPI:app --reload
+
 @app.get("/")
 async def root():
     body=(
@@ -58,7 +65,7 @@ async def change_N(new_value: int):
     Change the value of N, it's not retroactive, if new_value is incorrect return error
     Only administrators can call this function
     """
-    if new_value>len(usersAPI.tmp_user_database):
+    if new_value>usersAPI.get_user_n():
         return responses.JSONResponse(content={"message":"value is incorrect"},status_code=400)
     global n
     n=abs(new_value)
