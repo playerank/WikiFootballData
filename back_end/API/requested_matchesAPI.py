@@ -21,7 +21,6 @@ async def add_requested_match(home_team: str, away_team: str,competition_name: s
     """
     Add a match to the requested match list
     """
-    result=svc.add_r_match(home_team,away_team,competition_name,season_name)
-    if result==1:
+    if not svc.add_r_match(home_team,away_team,competition_name,season_name):
         return responses.JSONResponse(content={"message":"match already exists"},status_code=400)
     return {"message":"match added succesfully!"}

@@ -23,15 +23,15 @@ async def login(username: str, password: str):
     """
     Log in a new User, if username doesen't exist or password is incorrect return error
     """
-    response=svc.log_user(username, password)
+    result=svc.log_user(username, password)
     #decidere se usare switch
-    if response=="U":
+    if result=="U":
         return responses.JSONResponse(content={"message":f"username {username} is incorrect"},status_code=400)
-    if response=="P":
+    if result=="P":
         return responses.JSONResponse(content={"message":"password is incorrect"},status_code=400)
-    if response=="L":
+    if result=="L":
         return responses.JSONResponse(content={"message":"user already online"},status_code=400)
-    return {"message": f"successful login!{response}"}
+    return {"message": f"successful login!{result}"}
 
 
 @router.get("/logout")
@@ -75,3 +75,7 @@ async def get_online_user_list():
     #controllo dell'user
     online_user_list=svc.get_online_users()
     return online_user_list
+
+def get_user_n():
+    users=svc.get_users()
+    return len(users)

@@ -1,64 +1,63 @@
-from fastapi import APIRouter, responses#, Depends
-#from .dependencies import get_token_header
+from fastapi import APIRouter, responses
+import services.data_service as svc
 
 router = APIRouter(
     prefix="/teams",
-    tags=["teams"],
-    #dependencies=[Depends(get_token_header)],
-    #responses={404: {"description": "Not found"}},
+    tags=["teams"]#,#Possibile implementazione della sicurezza
+    # dependencies=[Depends(get_current_username)],
+    # responses={404: {"description":"not found"}},
 )
-
-team_db=[{"name":"F.C. Internazionale","is_confirmed":True}]
 
 @router.get("")
 async def get_team_list():
     """
     Return the team list from db
     """
-    return team_db
+    teams=svc.get_teams()
+    return teams
 
-@router.post("/{team_name}")
+@router.post("/add")
 async def add_team(team_name: str):
     """
     Add team to the collection, if team already exists return error
     """
-    for t in team_db:
-        if t["name"]==team_name:
-            return responses.JSONResponse(content={"message":"team already exists"}, status_code=400)
-    team_db.append({"name":team_name,"is_confirmed":False})
+    if not svc.add_team(team_name):
+        return responses.JSONResponse(content={"message":f"Team {team_name} already exists"}, status_code=400)
     return {"message":"team added succesfully!"}
 
-@router.post("/{new_team_name}")
+@router.post("/change")
 async def change_team(team_name:str, new_team_name:str):
     """
     Change the team name, if team inexistent or already confirmed definetely return error
     """
-    for t in team_db:
-        if t["name"]==team_name and t["is_confirmed"]==False:
-            t.update({"name":new_team_name})
-            return {"message":"team name updated successfully!"}
-    return responses.JSONResponse(content={"message":"team already confirmed"}, status_code=400)
+    result=svc.change_team_name(team_name, new_team_name)
+    if result==1:
+        return responses.JSONResponse(content={"message":"team_name is incorrect"}, status_code=400)
+    if result==2:
+        return responses.JSONResponse(content={"message":"team already confirmed"}, status_code=400)
+    return {"message":"team name updated successfully!"}
 
-@router.post("/{team_name}")
+@router.post("/assess")
 async def assess_team(team_name: str):
     """
-    Confirm definetely the team name
+    Confirm definetely the team name, if team inexistent or already confirmed definetely return error
     Only administrators or editors can call this function
     """
-    for t in team_db:
-        if t["name"]==team_name:
-            t.update({"is_confirmed":True})
-            return {"message":"team confirmed successfully!"}
-    return responses.JSONResponse(content={"message":"team_name is incorrect"}, status_code=400)
+    #controllo dell'user
+    result=svc.assess_team(team_name)
+    if result==1:
+       return responses.JSONResponse(content={"message":"team_name is incorrect"}, status_code=400) 
+    if result==2:
+        return responses.JSONResponse(content={"message":"team already confirmed"}, status_code=400)
+    return {"message":"team confirmed successfully!"}
 
-@router.post("/{new_team_name}")
+@router.post("/modify")
 async def modify_team(team_name: str, new_team_name: str):
     """
-    Modify and confirm definetely the team name
+    Modify and confirm definetely the team name, if team inexistent return error
     Only administrators or editors can call this function
     """
-    for t in team_db:
-        if t["name"]==team_name:
-            t.update({"name":new_team_name})
-            return {"message":"team updated and confirmed successfully!"}
-    return responses.JSONResponse(content={"message":"team_name is incorrect"}, status_code=400)
+    #controllo dell'user
+    if not svc.modify_team(team_name, new_team_name):
+        return responses.JSONResponse(content={"message":"team_name is incorrect"}, status_code=400)
+    return {"message":"team updated and confirmed successfully!"}

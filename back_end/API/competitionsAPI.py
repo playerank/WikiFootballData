@@ -21,8 +21,7 @@ async def add_competition(competition_name: str):
     """
     Add competition to the collection, if competition already exists return error
     """
-    result=svc.add_competition(competition_name)
-    if result==1:
+    if not svc.add_competition(competition_name):
         return responses.JSONResponse(content={"message":f"Competition {competition_name} already exists"}, status_code=400)
     return {"message":"competition added succesfully!"}
     
@@ -59,7 +58,6 @@ async def modify_competition(competition_name: str, new_competition_name: str, n
     Only administrators or editors can call this function
     """
     #controllo dell'user
-    result=svc.modify_competition(competition_name,new_competition_name,new_competition_code)
-    if result==1:
+    if not svc.modify_competition(competition_name,new_competition_name,new_competition_code):
         return responses.JSONResponse(content={"message":"competition_name is incorrect"}, status_code=400)
     return {"message":"competition updated and confirmed successfully!"}
