@@ -1,14 +1,18 @@
+from datetime import datetime
 from typing import List
+from bson import ObjectId
+from pydantic import HttpUrl
 from data.users import User
+from data.matches import Match
 from data.requested_matches import Requested_match
 from data.competitions import Competition
 from data.teams import Team
 
-#USERS_API TESTED
+#USERS_API
 
 def create_user(username: str, password: str) -> User:
     """
-    Create User and add it to db
+    Create User and add it to db, return True if operation is successful, False otherwise
     """
     user= User()
     user.username=username
@@ -30,6 +34,7 @@ def find_user_by_username(username: str) -> User:
 
 def log_user(username: str, password: str) -> str:
     """
+    Log a User verifying uits password.
     Return U if username is incorrect, P if password is incorrect, L if user already logged,
     A if user is admin, E if user is admin and S if is a simple user
     """
@@ -52,7 +57,8 @@ def log_user(username: str, password: str) -> str:
 
 def add_editor(username: str) -> bool:
     """
-    Return True if operation succeeded, False otherwise
+    Change the role of a User to editor.
+    Return True if operation is successful, False otherwise
     """
     new_editor:User=User.objects(username=username).first()
     #L'operazione fallisce
@@ -62,6 +68,9 @@ def add_editor(username: str) -> bool:
     return True
 
 def get_users() -> List[User]:
+    """
+    Return the list of all Users in the db, clearly not the passwords
+    """
     users:List[User]=list(User.objects().only('username','is_online','is_editor','is_administrator').all())
     #debug
     # for u in users:
@@ -69,44 +78,159 @@ def get_users() -> List[User]:
     return users
 
 def get_online_users() -> List[User]:
+    """
+    Retrun the list of online Users, clearly not the passwords
+    """
     online_users=list(User.objects().filter(is_online=True).only('username','is_editor','is_administrator').all())
     return online_users
 
-#REQUESTED_MATCHES_API TESTED
+#MATCHES_API
 
-def add_r_match(ht: str,at: str,cn: str,sn: str) -> bool:
-    existing_r_match: Requested_match=Requested_match.objects() \
-        .filter(home_team=ht) \
-        .filter(away_team=at) \
-        .filter(competition_name=cn) \
-        .filter(season_name=sn) \
-        .first()
-    if existing_r_match:
-        #debug
-        # print("Match esistente {} - {}, {} {}".format(existing_r_match.home_team,existing_r_match.away_team,existing_r_match.competition_name,existing_r_match.season_name))
-        return False
-    r_match=Requested_match()
-    r_match.home_team=ht
-    r_match.away_team=at
-    r_match.competition_name=cn
-    r_match.season_name=sn
-    r_match.save()
-    return True
+def get_match_id(home_team: str, away_team: str, season: str, competition_name: str) -> ObjectId | None:
+    """
+    Return the id of the match identified by parameters
+    """
+    match: Match=Match.objects() \
+        .filter(home_team=home_team) \
+        .filter(away_team=away_team) \
+        .filter(season=season) \
+        .filter(competition_name=competition_name) \
+        .only('id').first()
+    if not match:
+        return None
+    return match.id
+
+def get_match(match_id: ObjectId) -> Match:
+    """
+    Return the match identified by id
+    """
+    match: Match=Match.objects(id=match_id).first()
+    #debug
+    print("Trovato Match {}-{}, competition_id {} season {}, completato? {}".format(match.home_team_id,match.away_team_id,match.competition_id,match.season,match.is_completed))
+    return match
+
+def get_matches() -> List[Match]:
+    matches: List[Match]=list(Match.objects().all())
+    #debug
+    for m in matches:
+        print("Match {}-{}, competition_id {} season_id {}, completato? {}".format(m.home_team_id,m.away_team_id,m.competition_id,m.season_id,m.is_completed))
+    return matches
+
+def get_completed_matches() -> List[Match]:
+    """
+    Return the list of the completed matches
+    """
+    c_matches: List[Match]=list(Match.objects(is_completed=True).all())
+    #debug
+    for m in c_matches:
+        print("Match {}-{}, competition_id {} season {}, completato? {}".format(m.home_team_id,m.away_team_id,m.competition_id,m.season,m.is_completed))
+    return c_matches
+
+def get_completed_data(match_id: ObjectId) -> List | int:
+    """
+    Return the list of data of the match identified by match_id, 1 if mattch_id incorrect, 2 if match is not completed
+    """
+    c_match: Match=Match.objects(id=match_id).only('is_completed','data').first()
+    if not c_match:
+        return 1
+    if not c_match.is_completed:
+        return 2
+    return c_match.data
+
+def add_match(username: str, home_team: str, away_team: str, season: str, competition_name: str,round: str,date: datetime, link: HttpUrl) -> int:
+    """
+    Create a new Match and add it to the db.
+    Return 1 if competition_name is incorrect, 2 if home_team is incorrect, 3 if away_team is incorrect, 4 if already exists a match with that link. The checks are in efficency order
+    """
+    competition_id=get_competition_id(competition_name)
+    if not competition_id:
+        return 1
+    home_team_id=get_team_id(home_team)
+    if not home_team_id:
+        return 2
+    away_team_id=get_team_id(away_team)
+    if not away_team_id:
+        return 3
+    #il link dovrebbe identificare univocamente un match
+    e_match=Match.objects(link=link).only('id').first()
+    if e_match:
+        return 4
+    match=Match()
+    match.username=username
+    match.home_team_id=home_team_id
+    match.away_team_id=away_team_id
+    match.season=season
+    match.competition_id=competition_id
+    match.round=round
+    match.date_utc=date
+    match.link=link
+    match.save()
+    return 0
+
+def get_data(match_id: ObjectId) -> List | None:
+    match: Match=Match.objects(id=match_id).only('data').first()
+    if not match:
+        return None
+    return match.data
+    
+
+#REQUESTED_MATCHES_API
 
 def get_requested_matches() -> List[Requested_match]:
+    """
+    Return the list of the requested_matches
+    """
     r_matches:List[Requested_match]=list(Requested_match.objects().all())
     #debug
     # for r in r_matches:
     #     print("r_match {} - {}, {} {}".format(r.home_team,r.away_team,r.competition_name,r.season_name))
     return r_matches
 
+def add_r_match(home_team: str,away_team: str,competition_name: str,season: str) -> bool:
+    """
+    Create and add to the db a requested_match.
+    Return False if already exists a requested_match with the same value
+    """
+    existing_r_match: Requested_match=Requested_match.objects() \
+        .filter(home_team=home_team) \
+        .filter(away_team=away_team) \
+        .filter(competition_name=competition_name) \
+        .filter(season_name=season) \
+        .first()
+    if existing_r_match:
+        #debug
+        # print("Match esistente {} - {}, {} {}".format(existing_r_match.home_team,existing_r_match.away_team,existing_r_match.competition_name,existing_r_match.season_name))
+        return False
+    r_match=Requested_match()
+    r_match.home_team=home_team
+    r_match.away_team=away_team
+    r_match.competition_name=competition_name
+    r_match.season_name=season
+    r_match.save()
+    return True
+
 #COMPETITIONS_API
 
+def get_competition_id(competition_name: str) -> ObjectId | None:
+    """
+    Return the id of the competition identified by competition_name
+    """
+    competition: Competition=Competition.objects(competition_name=competition_name).only('id').first()
+    if not competition:
+        return None
+    return competition.id
+
 def get_competition(competition_name: str) -> Competition:
+    """
+    Return the competition identified by competition_name
+    """
     competition: Competition=Competition.objects(competition_name=competition_name).first()
     return competition
 
 def get_competitions() -> List[Competition]:
+    """
+    Return the list of the competitions in the db
+    """
     competitions:List[Competition]=list(Competition.objects().all())
     #debug
     # for c in competitions:
@@ -115,7 +239,8 @@ def get_competitions() -> List[Competition]:
 
 def add_competition(competition_name: str) -> bool:
     """
-    Return True if operation succeeded, False otherwise
+    Create a competition and add it to the db.
+    Return True if operation is successful, False otherwise
     """
     e_competition=get_competition(competition_name)
     if e_competition:
@@ -128,6 +253,10 @@ def add_competition(competition_name: str) -> bool:
     return True
 
 def change_competition_name(competition_name: str, new_competition_name: str) -> int:
+    """
+    Change the name of an existing competition.
+    Return 1 if the competition doesn't exist, 2 if the competition is already confirmed
+    """
     competition=get_competition(competition_name)
     if not competition:
         return 1
@@ -137,6 +266,10 @@ def change_competition_name(competition_name: str, new_competition_name: str) ->
     return 0
 
 def assess_competition(competition_name: str, competition_code: str) -> int:
+    """
+    Confirm an existing competition.
+    Return 1 if the competition doesn't exist, 2 if the competition is already confirmed
+    """
     competition=get_competition(competition_name)
     if not competition:
         return 1
@@ -147,7 +280,8 @@ def assess_competition(competition_name: str, competition_code: str) -> int:
 
 def modify_competition(competition_name: str, new_competition_name: str, new_competition_code: str) -> bool:
     """
-    Return True if operation succeeded, False otherwise
+    Modify the name, the code or both of an existing competition.
+    Return True if operation is successful, False otherwise
     """
     competition=get_competition(competition_name)
     if not competition:
@@ -162,11 +296,26 @@ def modify_competition(competition_name: str, new_competition_name: str, new_com
 
 #TEAMS_API
 
+def get_team_id(team_name: str) -> ObjectId | None:
+    """
+    Return the id of the team identified by team_name
+    """
+    team: Team=Team.objects(team_name=team_name).only('id').first()
+    if not team:
+        return None
+    return team.id
+
 def get_team(team_name: str) -> Team:
+    """
+    Return the team identified by team_name
+    """
     team: Team=Team.objects(team_name=team_name).first()
     return team
 
 def get_teams() -> List[Team]:
+    """
+    Return the list of the teams in the db
+    """
     teams:List[Team]=list(Team.objects().all())
     #debug
     # for t in teams:
@@ -175,7 +324,8 @@ def get_teams() -> List[Team]:
 
 def add_team(team_name: str) -> bool:
     """
-    Return True if operation succeeded, False otherwise
+    Create a team and add it to the db.
+    Return True if operation is successful, False otherwise
     """
     e_team=get_team(team_name)
     if e_team:
@@ -186,6 +336,10 @@ def add_team(team_name: str) -> bool:
     return True
 
 def change_team_name(team_name: str, new_team_name: str) -> int:
+    """
+    Change the name of an existing team.
+    Return 1 if the team doesn't exist, 2 if the team is already confirmed
+    """
     team=get_team(team_name)
     if not team:
         return 1
@@ -195,6 +349,10 @@ def change_team_name(team_name: str, new_team_name: str) -> int:
     return 0
 
 def assess_team(team_name: str) -> int:
+    """
+    Confirm an existing team.
+    Return 1 if the team doesn't exist, 2 if the team is already confirmed
+    """
     team=get_team(team_name)
     if not team:
         return 1
@@ -205,7 +363,8 @@ def assess_team(team_name: str) -> int:
 
 def modify_team(team_name: str, new_team_name: str) -> bool:
     """
-    Return True if operation succeeded, False otherwise
+    Modify the name of an existing team.
+    Return True if operation is successful, False otherwise
     """
     team=get_team(team_name)
     if not team:
