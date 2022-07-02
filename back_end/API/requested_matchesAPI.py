@@ -17,10 +17,10 @@ async def get_requested_match_list():
     return requested_match_list
 
 @router.post("/add_match")
-async def add_requested_match(home_team: str, away_team: str,competition_name: str, season_name: str):
+async def add_requested_match(home_team: str, away_team: str,competition_name: str, season: str):
     """
     Add a match to the requested match list
     """
-    if not svc.add_r_match(home_team,away_team,competition_name,season_name):
+    if not svc.add_r_match(home_team,away_team,competition_name,season):
         return responses.JSONResponse(content={"message":"match already exists"},status_code=400)
     return {"message":"match added succesfully!"}
