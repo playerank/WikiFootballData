@@ -17,15 +17,6 @@ app.include_router(playerAPI.router)
 
 n=5
 
-#https://fastapi.tiangolo.com/tutorial/bigger-applications/
-#https://fastapi.tiangolo.com/tutorial/security/
-#Per la sicurezza con jwt senza ruoli
-# https://github.com/ianrufus/youtube/tree/main/fastapi-jwt-auth/src
-#ROBOMONGO sostituto di mongoDBcompass
-
-#cd '.\Progetto wikiFootballData\back_end\API'
-#uvicorn mainAPI:app --reload
-
 @app.get("/")
 async def root():
     body=(
