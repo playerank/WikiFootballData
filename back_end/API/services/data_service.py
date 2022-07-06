@@ -4,9 +4,12 @@ from bson import ObjectId
 from pydantic import HttpUrl
 from data.users import User
 from data.matches import Match
+from data.events import Event
 from data.requested_matches import Requested_match
 from data.competitions import Competition
 from data.teams import Team
+
+#from mainAPI import n non si può fare
 
 #USERS_API
 
@@ -29,7 +32,7 @@ def find_user_by_username(username: str) -> User:
     #query di oggetti user con username=username, io ne voglio solo uno, così indico di fermarsi al primo,
     #ovviamente esendo univoco ce n'è solo uno.
     #User.objects().filter(username=username).first() query vera, se c'è un solo filtro posso usare ->
-    user= User.objects(username=username).first()
+    user=User.objects(username=username).first()
     return user
 
 def log_user(username: str, password: str) -> str:
@@ -113,14 +116,14 @@ def get_matches() -> List[Match]:
     matches: List[Match]=list(Match.objects().all())
     #debug
     for m in matches:
-        print("Match {}-{}, competition_id {} season_id {}, completato? {}".format(m.home_team_id,m.away_team_id,m.competition_id,m.season_id,m.is_completed))
+        print("Match {}-{}, competition_id {} season_id {}, completato? {}".format(m.home_team_id,m.away_team_id,m.competition_id,m.season,m.is_completed))
     return matches
 
 def get_completed_matches() -> List[Match]:
     """
     Return the list of the completed matches
     """
-    c_matches: List[Match]=list(Match.objects(is_completed=True).all())
+    c_matches: List[Match]=list(Match.objects(is_completed=True).only('home_team','away_team','competition_id','season','is_completed').all())
     #debug
     for m in c_matches:
         print("Match {}-{}, competition_id {} season {}, completato? {}".format(m.home_team_id,m.away_team_id,m.competition_id,m.season,m.is_completed))
@@ -128,7 +131,7 @@ def get_completed_matches() -> List[Match]:
 
 def get_completed_data(match_id: ObjectId) -> List | int:
     """
-    Return the list of data of the match identified by match_id, 1 if mattch_id incorrect, 2 if match is not completed
+    Return the list of data of the match identified by match_id, 1 if match_id incorrect, 2 if match is not completed
     """
     c_match: Match=Match.objects(id=match_id).only('is_completed','data').first()
     if not c_match:
@@ -137,7 +140,7 @@ def get_completed_data(match_id: ObjectId) -> List | int:
         return 2
     return c_match.data
 
-def add_match(username: str, home_team: str, away_team: str, season: str, competition_name: str,round: str,date: datetime, link: HttpUrl) -> int:
+def add_match(username: str, home_team: str, away_team: str, season: str, competition_name: str,round: str,date: datetime, link: HttpUrl):
     """
     Create a new Match and add it to the db.
     Return 1 if competition_name is incorrect, 2 if home_team is incorrect, 3 if away_team is incorrect, 4 if already exists a match with that link. The checks are in efficency order
@@ -164,6 +167,8 @@ def add_match(username: str, home_team: str, away_team: str, season: str, compet
     match.round=round
     match.date_utc=date
     match.link=link
+    # for x in range(26):
+
     match.save()
     return 0
 
@@ -172,7 +177,149 @@ def get_data(match_id: ObjectId) -> List | None:
     if not match:
         return None
     return match.data
+
+def change_match_link(match_id: ObjectId, new_link: HttpUrl):
+    match=get_match(match_id)
+    if not match:
+        return 1
+    if match.link_is_confirmed:
+        return 2
+    match.link=new_link
+    match.journal.append(f"Match link updated to {new_link}")
+    match.save()
+    return 0
+
+def change_match_report(match_id: ObjectId, new_report: str):
+    match=get_match(match_id)
+    if not match:
+        return 1
+    if match.report_is_confirmed:
+        return 2
+    match.report=new_report
+    match.journal.append("Match report updated")
+    match.save()
+    return 0
     
+def validate_data(match_id: ObjectId, data_index: int, judgement: bool):
+    match=get_match(match_id)
+    if not match:
+        return 1
+    if match.data[data_index].author!=None: #data is confirmed
+        return 2
+    if judgement:
+        match.data[data_index].endorsements+=1
+        match.journal.append("Match data {} endorsed, it has now {} endorsements".format(match.data[data_index].time_slot,match.data[data_index].endorsements))
+        if match.data[data_index].endorsements>=n:
+            match.data[data_index].author=match.data[data_index].working
+            match.data[data_index].working=None
+            match.journal.append("Match data {} is now confirmed because it reached {} endorsements".format(match.data[data_index].time_slot,match.data[data_index].endorsements))
+            #This analysis is added to collection Events
+            event=Event()
+            event.match_id=match_id
+            event.data_list[data_index].time_slot=match.data[data_index].time_slot
+            event.data_list[data_index].detail=match.data[data_index].detail
+            event.data_list[data_index].author=match.data[data_index].author
+            event.save()
+
+            if match.check_data:
+                match.is_completed=True
+                match.journal.append("Match is completed because every data reached {} endorsements".format(n))
+    else:
+        match.data[data_index].dislikes+=1
+        match.journal.append("Match data {} disliked, it has now {} dislikes".format(match.data[data_index].time_slot,match.data[data_index].dislikes))
+        if match.data[data_index].dislikes>=n:
+            match.journal.append("Match data {} reached {} dislikes, it is suggested to change it".format(match.data[data_index].time_slot,match.data[data_index].dislikes))
+    
+    match.save()
+    return 0
+
+def get_match_report(match_id: ObjectId):
+    match:Match=Match.objects(id=match_id).only('report').first()
+    if not match:
+        return None
+    return match.report
+
+def add_match_report(match_id: ObjectId, report):
+    match=get_match(match_id)
+    if not match:
+        return 1
+    if match.report!=None:
+        return 2
+    match.report=report
+    match.journal.append("Match report added")
+    match.save()
+    return 0
+
+def get_workers(match_id: ObjectId) -> List | None:
+    match:Match=Match.objects(id=match_id).only('working').first()
+    if not match:
+        return None
+    return match.working
+
+def get_free_time_slot(match_id: ObjectId)-> List | None:
+    match:Match=Match.objects(id=match_id).only('data').first()
+    if not match:
+        return None
+    free_time_slot=List()
+
+def read_journal(match_id: ObjectId):
+    match:Match=Match.objects(id=match_id).only('journal').first()
+    if not match:
+        return None
+    return match.journal
+
+def assess_name(username: str, match_id: ObjectId):
+    match=get_match(match_id)
+    if not match:
+        return 1
+    if match.is_confirmed:
+        return 2
+    match.is_confirmed=True
+    match.journal.append(f"Match name has been confirmed by {username}")
+    match.save()
+    return 0
+
+def assess_link(username: str, match_id: ObjectId):
+    match=get_match(match_id)
+    if not match:
+        return 1
+    if match.link_is_confirmed:
+        return 2
+    match.link_is_confirmed=True
+    match.journal.append(f"Match link has been confirmed by {username}")
+    match.save()
+    return 0
+
+def modify_link(username: str, match_id: ObjectId, link: HttpUrl) -> bool:
+    match=get_match(match_id)
+    if not match:
+        return False
+    match.link=link
+    match.link_is_confirmed=True
+    match.journal.append(f"Match link has been modified and confirmed by {username}")
+    match.save()
+    return True
+
+def assess_report(username: str, match_id: ObjectId):
+    match=get_match(match_id)
+    if not match:
+        return 1
+    if match.report_is_confirmed:
+        return 2
+    match.report_is_confirmed=True
+    match.journal.append(f"Match report has been confirmed by {username}")
+    match.save()
+    return 0
+
+def modify_report(username: str, match_id: ObjectId, report: HttpUrl) -> bool:
+    match=get_match(match_id)
+    if not match:
+        return False
+    match.report=report
+    match.report_is_confirmed=True
+    match.journal.append(f"Match report has been modified and confirmed by {username}")
+    match.save()
+    return True
 
 #REQUESTED_MATCHES_API
 
