@@ -34,7 +34,7 @@ async def change_team(team_name:str, new_team_name:str):
     if result==1:
         return responses.JSONResponse(content={"message":"team_name is incorrect"}, status_code=400)
     if result==2:
-        return responses.JSONResponse(content={"message":"team already confirmed"}, status_code=400)
+        return responses.JSONResponse(content={"message":"team already confirmed"}, status_code=403)
     return {"message":"team name updated successfully!"}
 
 @router.post("/assess")
@@ -48,7 +48,7 @@ async def assess_team(team_name: str):
     if result==1:
        return responses.JSONResponse(content={"message":"team_name is incorrect"}, status_code=400) 
     if result==2:
-        return responses.JSONResponse(content={"message":"team already confirmed"}, status_code=400)
+        return responses.JSONResponse(content={"message":"team already confirmed"}, status_code=403)
     return {"message":"team confirmed successfully!"}
 
 @router.post("/modify")

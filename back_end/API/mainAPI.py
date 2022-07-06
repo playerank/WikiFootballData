@@ -1,5 +1,4 @@
 from fastapi import Depends, FastAPI, responses
-#from dependencies import get_current_username
 import usersAPI
 import matchesAPI
 import requested_matchesAPI
@@ -17,6 +16,15 @@ app.include_router(teamsAPI.router)
 app.include_router(playerAPI.router)
 
 n=5
+
+#https://fastapi.tiangolo.com/tutorial/bigger-applications/
+#https://fastapi.tiangolo.com/tutorial/security/
+#Per la sicurezza con jwt senza ruoli
+# https://github.com/ianrufus/youtube/tree/main/fastapi-jwt-auth/src
+#ROBOMONGO sostituto di mongoDBcompass
+
+#cd '.\Progetto wikiFootballData\back_end\API'
+#uvicorn mainAPI:app --reload
 
 @app.get("/")
 async def root():
@@ -45,19 +53,21 @@ async def get_help():
     return responses.HTMLResponse(content=body)
 
 @app.get("/rules")
-async def get_N():
+async def get_N(username: str):
     """
     Return the value of N
     Only administrators can call this funcion
     """
+    #controllo dell'user
     return n
 
-@app.post("/rules/N")
-async def change_N(new_value: int):
+@app.post("/change-N")
+async def change_N(username: str, new_value: int):
     """
     Change the value of N, it's not retroactive, if new_value is incorrect return error
     Only administrators can call this function
     """
+    #controllo dell'user
     if new_value>usersAPI.get_user_n():
         return responses.JSONResponse(content={"message":"value is incorrect"},status_code=400)
     global n

@@ -34,7 +34,7 @@ async def change_competition(competition_name:str, new_competition_name:str):
     if result==1:
         return responses.JSONResponse(content={"message":"competition_name is incorrect"}, status_code=400)
     if result==2:
-        return responses.JSONResponse(content={"message":"competition already confirmed"}, status_code=400)
+        return responses.JSONResponse(content={"message":"competition already confirmed"}, status_code=403)
     return {"message":"competition name updated successfully!"}
 
 @router.post("/assess")
@@ -48,7 +48,7 @@ async def assess_competition(competition_name: str, competition_code: str):
     if result==1:
         return responses.JSONResponse(content={"message":"competition_name is incorrect"}, status_code=400)
     if result==2:
-        return responses.JSONResponse(content={"message":"competition already confirmed"}, status_code=400)
+        return responses.JSONResponse(content={"message":"competition already confirmed"}, status_code=403)
     return {"message":"competition confirmed successfully!"}
 
 @router.post("/modify")

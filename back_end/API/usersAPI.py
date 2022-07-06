@@ -6,7 +6,7 @@ router = APIRouter(
     tags=["users"]
 )
 
-##RICORDARSI DI FARE LAVORI ESTETICI (come strip(), etc) anche hash della password si può fare IN FRONT END
+##RICORDARSI DI FARE LAVORI ESTETICI (come strip(), etc)
 @router.post("/{username}")
 async def sign_up(username: str, password: str):
     """
@@ -46,7 +46,7 @@ async def logout(username: str):
     return {"message": "successful logout!"}
 
 @router.post("/{username}/role")
-async def add_editor(username: str):
+async def add_editor(user: str, username: str):
     """
     Change user role to editor, if username is incorrect return error
     Only administrators or editors can call this function
@@ -57,7 +57,7 @@ async def add_editor(username: str):
     return {"message": f"user {username} role updated successfully!"}
 
 @router.get("")
-async def get_user_list():
+async def get_user_list(username: str):
     """
     Get the user list from db, the return is in raw format(a list of user object)
     Only administrators can call this function
@@ -67,7 +67,7 @@ async def get_user_list():
     return users
 
 @router.get("/online")
-async def get_online_user_list():
+async def get_online_user_list(username: str):
     """
     Get the online user list from db, the return is in raw format(a list of user object)
     Only administrators can call this function
