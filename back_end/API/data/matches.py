@@ -1,5 +1,5 @@
 import mongoengine
-from data.analysis import Analysis
+from data.analysis import Analysis,init
 from typing import List
 
 class Match(mongoengine.Document):
@@ -19,6 +19,8 @@ class Match(mongoengine.Document):
     username=mongoengine.StringField(required=True)
     report=mongoengine.StringField() #FileFiled??
     report_is_confirmed=mongoengine.BooleanField(default=False)
+    extended_time=mongoengine.BooleanField(required=True)
+    penalty=mongoengine.BooleanField(required=True)
     journal: List[str]=mongoengine.ListField(default=["Match created!"])
     data: List[Analysis]=mongoengine.EmbeddedDocumentListField(Analysis)
     working=mongoengine.ListField()
@@ -29,16 +31,52 @@ class Match(mongoengine.Document):
         'db_alias': 'core',
         'collection': 'matches'
     }
+    @property
+    def create_data(self):
+        """
+        Creates the empty list of analysis
+        """
+        self.data: List[Analysis]=list()
+        self.data.append(init("1-5"))
+        self.data.append(init("6-10"))
+        self.data.append(init("11-15"))
+        self.data.append(init("16-20"))
+        self.data.append(init("21-25"))
+        self.data.append(init("26-30"))
+        self.data.append(init("31-35"))
+        self.data.append(init("36-40"))
+        self.data.append(init("41-45"))
+        self.data.append(init("e_t_1"))
+        self.data.append(init("45-50"))
+        self.data.append(init("51-55"))
+        self.data.append(init("56-60"))
+        self.data.append(init("61-65"))
+        self.data.append(init("66-70"))
+        self.data.append(init("71-75"))
+        self.data.append(init("76-80"))
+        self.data.append(init("81-85"))
+        self.data.append(init("86-90"))
+        self.data.append(init("e_t_2"))
+        if self.extended_time:
+            self.data.append(init("91-95"))
+            self.data.append(init("96-100"))
+            self.data.append(init("101-105"))
+            self.data.append(init("e_t_3"))
+            self.data.append(init("106-110"))
+            self.data.append(init("111-115"))
+            self.data.append(init("116-120"))
+            self.data.append(init("e_t_4"))
+        if self.penalty:
+            self.data.append("penalty")
+            
 
     @property
     def check_data(self) -> bool:
         """"
         Check if all data are completed
         """
-        for x in range(20): #senza supplementare, 25 coi supplementari
-            if not self.data[x]:
-                return False
-            if not self.data[x].author:
+        for d in self.data: 
+            if d.author=="":
                 return False
         return True
 
