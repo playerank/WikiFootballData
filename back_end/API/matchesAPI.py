@@ -56,7 +56,7 @@ async def get_match_id(home_team: str, away_team: str, season: str, competition_
     return {"message":f"id of the match={id}"}
 
 @router.post("/add") 
-async def add_match(username: str, home_team: str, away_team: str, season: str, competition_name: str, round: str, date: datetime, link: HttpUrl):
+async def add_match(username: str, home_team: str, away_team: str, season: str, competition_name: str, round: str, date: datetime, link: HttpUrl, extended_time: bool, penalty: bool):
     """
     Add a new match to db
     """
@@ -65,9 +65,8 @@ async def add_match(username: str, home_team: str, away_team: str, season: str, 
     #         return responses.JSONResponse(content={"message":"match already within the list"},status_code=400)
     # tmp_matches_database.append({"name":match_name,"link":link,"username":username})
     # return {"message":"match added successfully!"}
-    #ALLA CREAZIONE DEL MATCH DEVO SAPERE SE E' ANDATO AI TEMPI SUPPLEMENTARI E AI RIGORI OPPURE NO
     #DEVO CREARE GIA' LA LISTA DATA METTENDO A TUTTI GLI ELEMENTI WORKING E AUTHOR A NONE 
-    result=svc.add_match(username,home_team,away_team,season,competition_name,round,date,link)
+    result=svc.add_match(username,home_team,away_team,season,competition_name,round,date,link,extended_time,penalty)
     if result==1:
         return responses.JSONResponse(content={"message":f"competition {competition_name} is incorrect"},status_code=400)
     if result==2:
