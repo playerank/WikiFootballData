@@ -140,7 +140,7 @@ def get_completed_data(match_id: ObjectId) -> List | int:
         return 2
     return c_match.data
 
-def add_match(username: str, home_team: str, away_team: str, season: str, competition_name: str,round: str,date: datetime, link: HttpUrl):
+def add_match(username: str, home_team: str, away_team: str, season: str, competition_name: str,round: str,date: datetime, link: HttpUrl, extended_time: bool, penalty: bool):
     """
     Create a new Match and add it to the db.
     Return 1 if competition_name is incorrect, 2 if home_team is incorrect, 3 if away_team is incorrect, 4 if already exists a match with that link. The checks are in efficency order
@@ -167,8 +167,9 @@ def add_match(username: str, home_team: str, away_team: str, season: str, compet
     match.round=round
     match.date_utc=date
     match.link=link
-    # for x in range(26):
-
+    match.extended_time=extended_time
+    match.penalty=penalty
+    match.create_data
     match.save()
     return 0
 
