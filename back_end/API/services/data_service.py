@@ -3,7 +3,7 @@ from typing import List
 from bson import ObjectId
 from pydantic import HttpUrl
 from data.users import User
-from data.matches import Match
+from data.matches import Match, Analysis
 from data.events import Event
 from data.requested_matches import Requested_match
 from data.competitions import Competition
@@ -179,6 +179,39 @@ def get_data(match_id: ObjectId) -> List | None:
         return None
     return match.data
 
+def change_name(match_id, home_team: str, away_team: str, season: str, competition_name: str, round: str, date: datetime, link: HttpUrl, extended_time: bool, penalty: bool):
+    match=get_match(match_id)
+    if not match:
+        return 1
+    if match.is_confirmed:
+        return 2
+    if match.extended_time!=extended_time or match.penalty!=penalty:
+        match.extended_time=extended_time
+        match.penalty=penalty
+        match.change_data
+    if season!=" ":
+        match.season=season
+    if round!=" ":
+        match.round=round
+    match.date_utc=date
+    match.link=link
+    if competition_name!=" ":
+        competition_id=get_competition_id(competition_name)
+        if competition_id:
+            match.competition_id=competition_id
+    if home_team!=" ":
+        home_team_id=get_team_id(home_team)
+        if home_team_id:
+            match.home_team_id=home_team_id
+    if away_team!=" ":
+        away_team_id=get_team_id(away_team)
+        if away_team_id:
+            match.away_team_id=away_team_id
+    match.journal("Match name updated")
+    match.save()
+    return 0
+    
+
 def change_match_link(match_id: ObjectId, new_link: HttpUrl):
     match=get_match(match_id)
     if not match:
@@ -209,11 +242,11 @@ def validate_data(match_id: ObjectId, data_index: int, judgement: bool):
         return 2
     if judgement:
         match.data[data_index].endorsements+=1
-        match.journal.append("Match data {} endorsed, it has now {} endorsements".format(match.data[data_index].time_slot,match.data[data_index].endorsements))
+        match.journal.append(f"Match data {match.data[data_index].time_slot} endorsed, it has now {match.data[data_index].endorsements} endorsements")
         if match.data[data_index].endorsements>=n:
             match.data[data_index].author=match.data[data_index].working
-            match.data[data_index].working=None
-            match.journal.append("Match data {} is now confirmed because it reached {} endorsements".format(match.data[data_index].time_slot,match.data[data_index].endorsements))
+            match.data[data_index].working=None #qui va bene che diventi None perchè non devo più toccarlo
+            match.journal.append(f"Match data {match.data[data_index].time_slot} is now confirmed because it reached {match.data[data_index].endorsements} endorsements")
             #This analysis is added to collection Events
             event=Event()
             event.match_id=match_id
@@ -227,9 +260,11 @@ def validate_data(match_id: ObjectId, data_index: int, judgement: bool):
                 match.journal.append("Match is completed because every data reached {} endorsements".format(n))
     else:
         match.data[data_index].dislikes+=1
-        match.journal.append("Match data {} disliked, it has now {} dislikes".format(match.data[data_index].time_slot,match.data[data_index].dislikes))
+        match.journal.append(f"Match data {match.data[data_index].time_slot} disliked, it has now {match.data[data_index].dislikes} dislikes")
         if match.data[data_index].dislikes>=n:
-            match.journal.append("Match data {} reached {} dislikes, it is suggested to change it".format(match.data[data_index].time_slot,match.data[data_index].dislikes))
+            match.data[data_index].working=""
+            match.data[data_index].author="" #così è nuovamente lavorabile
+            match.journal.append(f"Match data {match.data[data_index].time_slot} reached {match.data[data_index].dislikes} dislikes, it is suggested to change it")
     
     match.save()
     return 0
@@ -257,11 +292,43 @@ def get_workers(match_id: ObjectId) -> List | None:
         return None
     return match.working
 
-def get_free_time_slot(match_id: ObjectId)-> List | None:
+def get_free_time_slot(match_id: ObjectId):
     match:Match=Match.objects(id=match_id).only('data').first()
     if not match:
-        return None
-    free_time_slot=List()
+        return 1
+    if match.is_completed:
+        return 2
+    free_time_slot: List[Analysis]=list()
+    for d in match.data:
+        if d.working=="" and d.author=="":
+            free_time_slot.append(d)
+    return free_time_slot
+
+def analyze_time_slot(username: str, match_id: ObjectId, data_index: int):
+    match=get_match(match_id)
+    if not match:
+        return 1
+    if match.is_completed:
+        return 2
+    if match.data[data_index].working!="" or match.data[data_index].author!="":
+        return 3
+    match.data[data_index].working=username
+    match.journal.append(f"User {username} started working at time slot {match.data[data_index].time_slot}")
+    match.save()
+    return 0
+
+def add_data(username: str, match_id: ObjectId, data_index: int, detail: str):#Json?:
+    match=get_match(match_id)
+    if not match:
+        return 1
+    if match.is_completed:
+        return 2
+    if match.data[data_index].working!=username:
+        return 3 
+    match.data[data_index].detail=detail
+    match.journal.append(f"User {username} ended working at time slot {match.data[data_index].time_slot}")
+    match.save()
+    return 0
 
 def read_journal(match_id: ObjectId):
     match:Match=Match.objects(id=match_id).only('journal').first()
