@@ -56,19 +56,61 @@ class Match(mongoengine.Document):
         self.data.append(init("76-80"))
         self.data.append(init("81-85"))
         self.data.append(init("86-90"))
-        self.data.append(init("e_t_2"))
+        self.data.append(init("e_t_2")) #index 19
         if self.extended_time:
-            self.data.append(init("91-95"))
+            self.data.append(init("91-95")) #index 20
             self.data.append(init("96-100"))
             self.data.append(init("101-105"))
             self.data.append(init("e_t_3"))
             self.data.append(init("106-110"))
             self.data.append(init("111-115"))
             self.data.append(init("116-120"))
-            self.data.append(init("e_t_4"))
+            self.data.append(init("e_t_4")) #index 27
         if self.penalty:
-            self.data.append("penalty")
-            
+            self.data.append("penalty") #index 28
+    
+    @property
+    def change_data(self):
+        l=len(self.data)
+        #ELIMINO
+        if l==29: #termina con penalty
+            if not self.penalty:
+                self.data.pop() #ora termina con e_t_4
+            if not self.extended_time:
+                for x in range(8):
+                    self.data.pop() #ora termina con e_t_2
+        #ELIMINO E FORSE AGGIUNGO
+        elif l==28: #termina con e_t_4
+            if not self.extended_time:
+                for x in range(8):
+                    self.data.pop()
+            if self.penalty:
+                self.data.append("penalty")
+        elif l==21: #pochissime le partite terminate ai rigori senza supplementari però esistono Community Shield, replay di partite di carabao cup etc
+            if not self.penalty:
+                self.data.pop() #ora termina con e_t_2
+            if self.extended_time:
+                self.data.append(init("91-95"))
+                self.data.append(init("96-100"))
+                self.data.append(init("101-105"))
+                self.data.append(init("e_t_3"))
+                self.data.append(init("106-110"))
+                self.data.append(init("111-115"))
+                self.data.append(init("116-120"))
+                self.data.append(init("e_t_4"))
+        #AGGIUNGO
+        elif l==20:
+            if self.extended_time:
+                self.data.append(init("91-95"))
+                self.data.append(init("96-100"))
+                self.data.append(init("101-105"))
+                self.data.append(init("e_t_3"))
+                self.data.append(init("106-110"))
+                self.data.append(init("111-115"))
+                self.data.append(init("116-120"))
+                self.data.append(init("e_t_4"))
+            if self.penalty:
+                self.data.append("penalty")
 
     @property
     def check_data(self) -> bool:
@@ -82,4 +124,4 @@ class Match(mongoengine.Document):
 
 #time_slot vanno da 1-5 a rigori
 #1-5, 6-10, 11-15, 16-20, 21-25, 26-30, 31-35, 36-40, 41-45, recupero1, 46-50 -> 86-90, recupero2, 91-95 -> 101-105, recupero3, 106-110 -> 116-120, recupero4, rigori
-#sono 26
+#sono 29
