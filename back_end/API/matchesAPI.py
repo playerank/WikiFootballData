@@ -65,7 +65,6 @@ async def add_match(username: str, home_team: str, away_team: str, season: str, 
     #         return responses.JSONResponse(content={"message":"match already within the list"},status_code=400)
     # tmp_matches_database.append({"name":match_name,"link":link,"username":username})
     # return {"message":"match added successfully!"}
-    #DEVO CREARE GIA' LA LISTA DATA METTENDO A TUTTI GLI ELEMENTI WORKING E AUTHOR A NONE 
     result=svc.add_match(username,home_team,away_team,season,competition_name,round,date,link,extended_time,penalty)
     if result==1:
         return responses.JSONResponse(content={"message":f"competition {competition_name} is incorrect"},status_code=400)
@@ -88,20 +87,25 @@ async def get_data(match_id):
     # return responses.JSONResponse(content={"message":"match_name is incorrect"},status_code=400)
     data=svc.get_data(match_id)
     if not data:
-        return responses.JSONResponse(content={"message":f"match_id {match_id} is incorrect"},status_code=400)
+        return responses.JSONResponse(content={"message":"match_id is incorrect"},status_code=400)
     return data
 
-# @router.post("/change-name")
-# async def change_match_name(match_id: ObjectId, new_match_name: str):
-#     """
-#     Change the name of the match, if the match_name is incorrect return error
-#     """
-#     return responses.JSONResponse(content={"message": "Not implemented yet!"},status_code=503)
+@router.post("/change-name")
+async def change_match_name(match_id, home_team: str, away_team: str, season: str, competition_name: str, round: str, date: datetime, link: HttpUrl, extended_time: bool, penalty: bool):
+    """
+    Change the name of the match, if the match_id is incorrect or match is already confirmed return error
+    """
+    result=svc.change_name(match_id, home_team, away_team, season, competition_name, round, date, link, extended_time, penalty)
+    if result==1:
+        return responses.JSONResponse(content={"message":"match_id is incorrect"},status_code=400)
+    if result==2:
+        return responses.JSONResponse(content={"message":"match already confirmed"},status_code=403)
+    return {"message":"Match name updated successfully!"}
 
 @router.post("/change-link")
 async def change_match_link(match_id, new_link: HttpUrl):
     """
-    Change the link of the match, if match_id is incorrect or match is already confirmed return error
+    Change the link of the match, if match_id is incorrect or match link is already confirmed return error
     """
     # for elem in tmp_matches_database:
     #     if elem["name"]==match_name:
@@ -112,14 +116,14 @@ async def change_match_link(match_id, new_link: HttpUrl):
     if result==1:
         return responses.JSONResponse(content={"message":"match_id is incorrect"},status_code=400)
     if result==2:
-        return responses.JSONResponse(content={"message":"match already confirmed"},status_code=403)
+        return responses.JSONResponse(content={"message":"match link already confirmed"},status_code=403)
     return {"message":"Match link updated successfully!"}
     
 
 @router.post("/change-report")
 async def change_match_report(match_id, report: str):
     """
-    Change the report of the match, if match_id is incorrect or match is already confirmed return error
+    Change the report of the match, if match_id is incorrect or match report is already confirmed return error
     """
     # for elem in tmp_matches_database:
     #     if elem["name"]==match_name and elem["report"]!="":
@@ -130,7 +134,7 @@ async def change_match_report(match_id, report: str):
     if result==1:
         return responses.JSONResponse(content={"message":"match_id is incorrect"},status_code=400)
     if result==2:
-        return responses.JSONResponse(content={"message":"match already confirmed"},status_code=403)
+        return responses.JSONResponse(content={"message":"match report already confirmed"},status_code=403)
     return {"message":"Match report updated successfully!"}
 
 @router.post("/validate")
@@ -200,46 +204,69 @@ async def get_workers(match_id): #DA RIMUOVERE?
         return responses.JSONResponse(content={"message":"match_id is incorrect"},status_code=400)
     return worker_list
 
-# @router.get("/get-free-slot")
-# async def get_free_time_slot(match_id):
-#     """
-#     Get the list of the free time slot of the match from db, if the match_id is incorrect return error
-#     """
-#     # for elem in tmp_matches_database:
-#     #     if elem["name"]==match_name:
-#     #         time_slot=list()
-#     #         for min in elem["name"]["data"]:
-#     #             if min["working"]=="" and min["analysis"]=="":
-#     #                 time_slot.append(min)
-#     #         return time_slot
-#     # return responses.JSONResponse(content={"message":"match_name is incorrect"},status_code=400)
-#     time_slots=svc.get_free_time_slot(match_id)
+@router.get("/get-free-slot")
+async def get_free_time_slot(match_id):
+    """
+    Get the list of the free time slot of the match from db, if the match_id is incorrect or the match is completed return error
+    """
+    # for elem in tmp_matches_database:
+    #     if elem["name"]==match_name:
+    #         time_slot=list()
+    #         for min in elem["name"]["data"]:
+    #             if min["working"]=="" and min["analysis"]=="":
+    #                 time_slot.append(min)
+    #         return time_slot
+    # return responses.JSONResponse(content={"message":"match_name is incorrect"},status_code=400)
+    time_slots=svc.get_free_time_slot(match_id)
+    if time_slots==1:
+        return responses.JSONResponse(content={"message":"match_id is incorrect"},status_code=400)
+    if time_slots==2:
+        return responses.JSONResponse(content={"message":"match is already completed"},status_code=403)
+    return time_slots
 
-# @router.post("/analyze-slot")
-# async def analyze_time_slot(username: str, match_id: ObjectId, time_slot_id: int):
-#     """
-#     Signal the server that a user started processing the time slot, if the match_name is incorrect return error
-#     """
-#     # for elem in tmp_matches_database:
-#     #     if elem["name"]==match_name:
-#     #         elem["data"][time_slot_id]["working"]=username
-#     #         return {"message":"working set successfully!"}
-#     # return responses.JSONResponse(content={"message":"match_name is incorrect"},status_code=400)
-#     return responses.JSONResponse(content={"message": "Not implemented yet!"},status_code=503)
+@router.post("/analyze-slot")
+async def analyze_time_slot(username: str, match_id, data_index: int):
+    """
+    Signal the server that a user started processing the time slot, if the match_id is incorrect, the match is completed or the time_slot is not free return error
+    """
+    # for elem in tmp_matches_database:
+    #     if elem["name"]==match_name:
+    #         elem["data"][time_slot_id]["working"]=username
+    #         return {"message":"working set successfully!"}
+    # return responses.JSONResponse(content={"message":"match_name is incorrect"},status_code=400)
+    if data_index<0 or data_index>28:
+        return responses.JSONResponse(content={"message":f"data_index {data_index} is incorrect"},status_code=400)
+    result=svc.analyze_time_slot(username, match_id, data_index)
+    if result==1:
+        return responses.JSONResponse(content={"message":"match_id is incorrect"},status_code=400)
+    if result==2:
+        return responses.JSONResponse(content={"message":"match is completed"},status_code=403)
+    if result==3:
+        return responses.JSONResponse(content={"message":"time_slot is being analyzed by another user"},status_code=400)
+    return {"message":"working username set successfully!"}
 
-# @router.post("/add-data")
-# async def add_data(username: str,match_id: ObjectId, time_slot_id: str, result: str):#Json):
-#     """
-#     Add the result of the analysis to the db, if the match_name is incorrect return error
-#     """
-#     # for elem in tmp_matches_database:
-#     #     if elem["name"]==match_name:
-#     #         elem["data"][time_slot_id]["working"]=""
-#     #         elem["data"][time_slot_id]["author"]=username
-#     #         elem["data"][time_slot_id]["analysis"]=result
-#     #         return {"message":"match data updated successfully!"}
-#     # return responses.JSONResponse(content={"message":"match_name is incorrect"},status_code=400)
-#     return responses.JSONResponse(content={"message": "Not implemented yet!"},status_code=503)
+@router.post("/add-data")
+async def add_data(username: str, match_id, data_index: int, detail: str):#Json):
+    """
+    Add the result of the analysis to the db, if the match_id is incorrect return error
+    """
+    # for elem in tmp_matches_database:
+    #     if elem["name"]==match_name:
+    #         elem["data"][time_slot_id]["working"]=""
+    #         elem["data"][time_slot_id]["author"]=username
+    #         elem["data"][time_slot_id]["analysis"]=result
+    #         return {"message":"match data updated successfully!"}
+    # return responses.JSONResponse(content={"message":"match_name is incorrect"},status_code=400)
+    if data_index<0 or data_index>28:
+        return responses.JSONResponse(content={"message":f"data_index {data_index} is incorrect"},status_code=400)
+    result=svc.add_data(username,match_id,data_index,detail)
+    if result==1:
+        return responses.JSONResponse(content={"message":"match_id is incorrect"},status_code=400)
+    if result==2:
+        return responses.JSONResponse(content={"message":"match is completed"},status_code=403)
+    if result==3:
+        return responses.JSONResponse(content={"message":"time_slot is being analyzed by another user"},status_code=400)
+    return {"message":"match data updated successfully!"}
 
 @router.get("/journal")
 async def read_journal(match_id):
