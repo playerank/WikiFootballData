@@ -95,7 +95,7 @@ async def change_match_name(match_id, home_team: str, away_team: str, season: st
     """
     Change the name of the match, if the match_id is incorrect or match is already confirmed return error
     """
-    result=svc.change_name(match_id, home_team, away_team, season, competition_name, round, date, link, extended_time, penalty)
+    result=svc.change_name(True, match_id, home_team, away_team, season, competition_name, round, date, link, extended_time, penalty)
     if result==1:
         return responses.JSONResponse(content={"message":"match_id is incorrect"},status_code=400)
     if result==2:
@@ -156,7 +156,7 @@ async def validate_data(match_id, data_index: int, judgement: bool):
     if result==1:
         return responses.JSONResponse(content={"message":"match_id is incorrect"},status_code=400)
     if result==2:
-        return responses.JSONResponse(content={"message":"data already confirmed"},status_code=400)
+        return responses.JSONResponse(content={"message":"data already confirmed"},status_code=403)
     return {"message":"Data judgement updated successfully!"}
 
 @router.get("/get-report")
@@ -302,19 +302,23 @@ async def assess_name(username: str, match_id):
         return responses.JSONResponse(content={"message":"match_name already confirmed"},status_code=400)
     return {"message":"match_name confirmed successfully!"}
 
-# @router.post("/modify-name")
-# async def modify_name(match_id, ):
-#     """
-#     Modify and confirm definitely the match name in the db, if the match_name is incorrect return error
-#     Only administrators or editors can call this function
-#     """
-#     # for elem in tmp_matches_database:
-#     #     if elem["name"]==match_name:
-#     #         elem.update({"name":new_match_name})
-#     #         elem.update({"is_confirmed":True})
-#     #         return {"message":"match_name updated and confirmed successfully!"}
-#     # return responses.JSONResponse(content={"message":"match_name is incorrect"},status_code=400)
-#     return responses.JSONResponse(content={"message": "Not implemented yet!"},status_code=503)
+@router.post("/modify-name")
+async def modify_name(match_id, home_team: str, away_team: str, season: str, competition_name: str, round: str, date: datetime, link: HttpUrl, extended_time: bool, penalty: bool):
+    """
+    Modify and confirm definitely the match name in the db, if the match_name is incorrect return error
+    Only administrators or editors can call this function
+    """
+    # for elem in tmp_matches_database:
+    #     if elem["name"]==match_name:
+    #         elem.update({"name":new_match_name})
+    #         elem.update({"is_confirmed":True})
+    #         return {"message":"match_name updated and confirmed successfully!"}
+    # return responses.JSONResponse(content={"message":"match_name is incorrect"},status_code=400)
+    #controllo dell'user
+    result=svc.change_name(False, match_id, home_team, away_team, season, competition_name, round, date, link, extended_time, penalty)
+    if result==1:
+        return responses.JSONResponse(content={"message":"match_id is incorrect"},status_code=400)
+    return {"message":"Match name updated successfully!"}
 
 @router.post("/assess-link")
 async def assess_link(username: str,match_id):

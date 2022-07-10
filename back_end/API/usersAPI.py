@@ -46,15 +46,17 @@ async def logout(username: str):
     return {"message": "successful logout!"}
 
 @router.post("/{username}/role")
-async def add_editor(user: str, username: str):
+async def add_editor(username: str, user: str):
     """
     Change user role to editor, if username is incorrect return error
     Only administrators or editors can call this function
     """
-    #controllo dell'user
-    if not svc.add_editor(username):
+    role=svc.verify_role(username)
+    if role!="A" and role!="E":
+        return responses.JSONResponse(content={"message":"Forbidden Operation"},status_code=403)
+    if not svc.add_editor(user):
         return responses.JSONResponse(content={"message":"username is incorrect!"},status_code=400)
-    return {"message": f"user {username} role updated successfully!"}
+    return {"message": f"user {user} role updated successfully!"}
 
 @router.get("")
 async def get_user_list(username: str):
@@ -62,7 +64,8 @@ async def get_user_list(username: str):
     Get the user list from db, the return is in raw format(a list of user object)
     Only administrators can call this function
     """
-    #controllo dell'user
+    if svc.verify_role(username)!="A":
+        return responses.JSONResponse(content={"message":"Forbidden Operation"},status_code=403)
     users=svc.get_users()
     return users
 
@@ -72,7 +75,8 @@ async def get_online_user_list(username: str):
     Get the online user list from db, the return is in raw format(a list of user object)
     Only administrators can call this function
     """
-    #controllo dell'user
+    if svc.verify_role(username)!="A":
+        return responses.JSONResponse(content={"message":"Forbidden Operation"},status_code=403)
     online_user_list=svc.get_online_users()
     return online_user_list
 
