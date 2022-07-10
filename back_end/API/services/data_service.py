@@ -8,6 +8,7 @@ from data.events import Event
 from data.requested_matches import Requested_match
 from data.competitions import Competition
 from data.teams import Team
+from data.rules import n
 
 #from mainAPI import n non si può fare
 
@@ -35,9 +36,24 @@ def find_user_by_username(username: str) -> User:
     user=User.objects(username=username).first()
     return user
 
-def log_user(username: str, password: str) -> str:
+def verify_role(username: str):
     """
-    Log a User verifying uits password.
+    Return the role of the User identified by username
+    """
+    user=find_user_by_username(username)
+    if not user:
+        return "U"
+    if not user.is_online:
+        return "M" #mistake
+    if user.is_administrator:
+        return "A"
+    if user.is_editor:
+        return "E"
+    return "S" #simple User
+
+def log_user(username: str, password: str):
+    """
+    Log a User verifying its password.
     Return U if username is incorrect, P if password is incorrect, L if user already logged,
     A if user is admin, E if user is admin and S if is a simple user
     """
@@ -55,8 +71,7 @@ def log_user(username: str, password: str) -> str:
         return "A"
     if user.is_editor:
         return "E"
-    else:
-        return "S"
+    return "S"
 
 def add_editor(username: str) -> bool:
     """
@@ -72,7 +87,7 @@ def add_editor(username: str) -> bool:
 
 def get_users() -> List[User]:
     """
-    Return the list of all Users in the db, clearly not the passwords
+    Return the list of all Users in the db (clearly not the passwords)
     """
     users:List[User]=list(User.objects().only('username','is_online','is_editor','is_administrator').all())
     #debug
@@ -82,7 +97,7 @@ def get_users() -> List[User]:
 
 def get_online_users() -> List[User]:
     """
-    Retrun the list of online Users, clearly not the passwords
+    Retrun the list of online Users (clearly not the passwords)
     """
     online_users=list(User.objects().filter(is_online=True).only('username','is_editor','is_administrator').all())
     return online_users
@@ -113,6 +128,9 @@ def get_match(match_id: ObjectId) -> Match:
     return match
 
 def get_matches() -> List[Match]:
+    """
+    Retrun the list of the matches in the db
+    """
     matches: List[Match]=list(Match.objects().all())
     #debug
     for m in matches:
@@ -121,7 +139,7 @@ def get_matches() -> List[Match]:
 
 def get_completed_matches() -> List[Match]:
     """
-    Return the list of the completed matches
+    Return the list of the completed matches in the db
     """
     c_matches: List[Match]=list(Match.objects(is_completed=True).only('home_team','away_team','competition_id','season','is_completed').all())
     #debug
@@ -174,17 +192,25 @@ def add_match(username: str, home_team: str, away_team: str, season: str, compet
     return 0
 
 def get_data(match_id: ObjectId) -> List | None:
+    """
+    Return the list of data of the match identified by match_id
+    """
     match: Match=Match.objects(id=match_id).only('data').first()
     if not match:
         return None
     return match.data
 
-def change_name(match_id, home_team: str, away_team: str, season: str, competition_name: str, round: str, date: datetime, link: HttpUrl, extended_time: bool, penalty: bool):
+def change_name(check: bool, match_id, home_team: str, away_team: str, season: str, competition_name: str, round: str, date: datetime, link: HttpUrl, extended_time: bool, penalty: bool):
+    """
+    Function that change or modify the match name(depends of the value of check).
+    Before changing every value it verify that the new values aren't empty.
+    """
     match=get_match(match_id)
     if not match:
         return 1
-    if match.is_confirmed:
-        return 2
+    if check:
+        if match.is_confirmed:
+            return 2
     if match.extended_time!=extended_time or match.penalty!=penalty:
         match.extended_time=extended_time
         match.penalty=penalty
@@ -207,12 +233,20 @@ def change_name(match_id, home_team: str, away_team: str, season: str, competiti
         away_team_id=get_team_id(away_team)
         if away_team_id:
             match.away_team_id=away_team_id
-    match.journal("Match name updated")
+    if check:
+        match.journal.append("Match name updated")
+    else:
+        match.is_confirmed=True
+        match.journal.append("Match name updated and confirmed definitely")
     match.save()
     return 0
     
 
 def change_match_link(match_id: ObjectId, new_link: HttpUrl):
+    """
+    Change the link of the match identified by match_id.
+    Return 1 if the match doesn't exist, 2 if the match link is already confirmed
+    """
     match=get_match(match_id)
     if not match:
         return 1
@@ -224,6 +258,10 @@ def change_match_link(match_id: ObjectId, new_link: HttpUrl):
     return 0
 
 def change_match_report(match_id: ObjectId, new_report: str):
+    """
+    Change the report of the match identified by match_id.
+    Return 1 if the match doesn't exist, 2 if the match report is already confirmed
+    """
     match=get_match(match_id)
     if not match:
         return 1
@@ -235,6 +273,10 @@ def change_match_report(match_id: ObjectId, new_report: str):
     return 0
     
 def validate_data(match_id: ObjectId, data_index: int, judgement: bool):
+    """
+    Add a judgement to the specified data.
+    If the data reach n endorsements it will be added to the event collection and it will start a check to all data, if all data are completed(reached n endorsements), the whole match will be considered completed
+    """
     match=get_match(match_id)
     if not match:
         return 1
@@ -270,12 +312,19 @@ def validate_data(match_id: ObjectId, data_index: int, judgement: bool):
     return 0
 
 def get_match_report(match_id: ObjectId):
+    """
+    Return the report of the meatch identified by match_id
+    """
     match:Match=Match.objects(id=match_id).only('report').first()
     if not match:
         return None
     return match.report
 
 def add_match_report(match_id: ObjectId, report):
+    """
+    Add the match report to the match identified by match_id.
+    Return 1 if the match doesn't exist, 2 if the match report was already present
+    """
     match=get_match(match_id)
     if not match:
         return 1
@@ -287,12 +336,19 @@ def add_match_report(match_id: ObjectId, report):
     return 0
 
 def get_workers(match_id: ObjectId) -> List | None:
+    """
+    Return the list of the user that worked on the match identified by match_id
+    """
     match:Match=Match.objects(id=match_id).only('working').first()
     if not match:
         return None
     return match.working
 
 def get_free_time_slot(match_id: ObjectId):
+    """
+    Return the list of the time slot that aren't being analyzed by some user.
+    In case of errror return 1 if the match doesn't exist, 2 if the match is already completed
+    """
     match:Match=Match.objects(id=match_id).only('data').first()
     if not match:
         return 1
@@ -305,6 +361,10 @@ def get_free_time_slot(match_id: ObjectId):
     return free_time_slot
 
 def analyze_time_slot(username: str, match_id: ObjectId, data_index: int):
+    """
+    Signal in the specified data that the user identified by username is analyzing it.
+    Return 1 if the match doesn't exist, 2 if the match is already completed, 3 if the specified data is being analyzed or was analyzed by another user
+    """
     match=get_match(match_id)
     if not match:
         return 1
@@ -318,6 +378,10 @@ def analyze_time_slot(username: str, match_id: ObjectId, data_index: int):
     return 0
 
 def add_data(username: str, match_id: ObjectId, data_index: int, detail: str):#Json?:
+    """
+    Add the detail of the specified data.
+    Return 1 if the match doesn't exist, 2 if the match is already completed, 3 if the specified data is being analyzed by another user
+    """
     match=get_match(match_id)
     if not match:
         return 1
@@ -331,12 +395,19 @@ def add_data(username: str, match_id: ObjectId, data_index: int, detail: str):#J
     return 0
 
 def read_journal(match_id: ObjectId):
+    """
+    Return the journal of the match identified by the match_id
+    """
     match:Match=Match.objects(id=match_id).only('journal').first()
     if not match:
         return None
     return match.journal
 
 def assess_name(username: str, match_id: ObjectId):
+    """
+    Confirms definitely the match name.
+    Return 1 if the match doesn't exist, 2 if the match name is already confirmed
+    """
     match=get_match(match_id)
     if not match:
         return 1
@@ -348,6 +419,10 @@ def assess_name(username: str, match_id: ObjectId):
     return 0
 
 def assess_link(username: str, match_id: ObjectId):
+    """
+    Confirms definitely the match link.
+    Return 1 if the match doesn't exist, 2 if the match link is already confirmed
+    """
     match=get_match(match_id)
     if not match:
         return 1
@@ -359,6 +434,10 @@ def assess_link(username: str, match_id: ObjectId):
     return 0
 
 def modify_link(username: str, match_id: ObjectId, link: HttpUrl) -> bool:
+    """
+    Modify and confirms definitely the match link.
+    Return True if operation is successful, False otherwise
+    """
     match=get_match(match_id)
     if not match:
         return False
@@ -369,6 +448,10 @@ def modify_link(username: str, match_id: ObjectId, link: HttpUrl) -> bool:
     return True
 
 def assess_report(username: str, match_id: ObjectId):
+    """
+    Confirms definitely the match report.
+    Return 1 if the match doesn't exist, 2 if the match report is already confirmed
+    """
     match=get_match(match_id)
     if not match:
         return 1
@@ -380,6 +463,10 @@ def assess_report(username: str, match_id: ObjectId):
     return 0
 
 def modify_report(username: str, match_id: ObjectId, report: HttpUrl) -> bool:
+    """
+    Modify and confirms definitely the match report.
+    Return True if operation is successful, False otherwise
+    """
     match=get_match(match_id)
     if not match:
         return False
