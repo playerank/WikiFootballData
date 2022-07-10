@@ -114,7 +114,7 @@ class Match(mongoengine.Document):
 
     @property
     def check_data(self) -> bool:
-        """"
+        """
         Check if all data are completed
         """
         for d in self.data: 
