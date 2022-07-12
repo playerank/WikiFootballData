@@ -5,7 +5,7 @@ class Analysis(mongoengine.EmbeddedDocument):
     Class defining an analysis
     """
     time_slot=mongoengine.StringField(required=True)
-    detail=mongoengine.FileField() ##??
+    detail=mongoengine.StringField() ##FileFiled??
     working=mongoengine.StringField(required=True)
     author=mongoengine.StringField(required=True)
     endorsements=mongoengine.IntField(required=True)
