@@ -38,12 +38,14 @@ async def change_competition(competition_name:str, new_competition_name:str):
     return {"message":"competition name updated successfully!"}
 
 @router.post("/assess")
-async def assess_competition(competition_name: str, competition_code: str):
+async def assess_competition(username: str, competition_name: str, competition_code: str):
     """
     Confirm definetely the competition name and add the competition code, if competition inexistent or already confirmed definetely return error
     Only administrators or editors can call this function
     """
-    #controllo dell'user
+    role=svc.verify_role(username)
+    if role!="A" and role!="E":
+        return responses.JSONResponse(content={"message":"Forbidden Operation"},status_code=403)
     result=svc.assess_competition(competition_name,competition_code)
     if result==1:
         return responses.JSONResponse(content={"message":"competition_name is incorrect"}, status_code=400)
@@ -52,12 +54,14 @@ async def assess_competition(competition_name: str, competition_code: str):
     return {"message":"competition confirmed successfully!"}
 
 @router.post("/modify")
-async def modify_competition(competition_name: str, new_competition_name: str, new_competition_code: str):
+async def modify_competition(username: str, competition_name: str, new_competition_name: str, new_competition_code: str):
     """
     Modify and confirm definetely the competition name and code, if competition inexistent return error
     Only administrators or editors can call this function
     """
-    #controllo dell'user
+    role=svc.verify_role(username)
+    if role!="A" and role!="E":
+        return responses.JSONResponse(content={"message":"Forbidden Operation"},status_code=403)
     if not svc.modify_competition(competition_name,new_competition_name,new_competition_code):
         return responses.JSONResponse(content={"message":"competition_name is incorrect"}, status_code=400)
     return {"message":"competition updated and confirmed successfully!"}

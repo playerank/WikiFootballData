@@ -1,4 +1,5 @@
-from fastapi import APIRouter, responses
+from typing import Dict
+from fastapi import APIRouter, Depends, HTTPException, responses
 import services.data_service as svc
 
 router = APIRouter(
@@ -6,8 +7,24 @@ router = APIRouter(
     tags=["users"]
 )
 
+SECRET_KEY='Q3HSkAyAeeX7yKfdfC2xWaSsZQJKI3CILskncv0Z9ZcmO5cRGEpmeB9GRAVP53z1' #64
+ALGORITHM="HS256"
 ##RICORDARSI DI FARE LAVORI ESTETICI (come strip(), etc)
-@router.post("/{username}")
+#Molto probabilmente da fare nel main
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from datetime import datetime,timedelta
+from jose import jwt
+
+oauth2_scheme= OAuth2PasswordBearer(tokenUrl="/users/login")
+
+def create_access_token(data: Dict[str, str], expires_delta: timedelta):
+    to_encode= data.copy()
+    expire=datetime.utcnow()+expires_delta
+    to_encode.update({"exp":expire})
+    encoded_jwt=jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
+
+@router.post("/sign_up")
 async def sign_up(username: str, password: str):
     """
     Register a new user
@@ -15,27 +32,31 @@ async def sign_up(username: str, password: str):
     existing_user=svc.find_user_by_username(username)
     if existing_user:
         return responses.JSONResponse(content={"message":f"username {username} already exists"},status_code=400)
+    #hashed_password=hash_password(password)
     new_user=svc.create_user(username,password)
     return {"message":"user created succesfully!"}#id={new_user.id} debug
 
-@router.get("/login")
-async def login(username: str, password: str):
+@router.post("/login")
+async def login(form_data: OAuth2PasswordRequestForm= Depends()):#username: str, password: str):
     """
-    Log in a new User, if username doesen't exist or password is incorrect return error
+    Log in a new User, if username doesen't exist or password is incorrect return error.
+    FUNCTION CALLED AUTOMATICALLY BY THE SECURITY SYSTEM DO NOT CALL IT
     """
+    username=form_data.username
+    password=form_data.password
     result=svc.log_user(username, password)
-    #decidere se usare switch
     if result=="U":
-        return responses.JSONResponse(content={"message":f"username {username} is incorrect"},status_code=400)
+        raise HTTPException(status_code=400, detail=f"username {username} is incorrect")
     if result=="P":
-        return responses.JSONResponse(content={"message":"password is incorrect"},status_code=400)
+        raise HTTPException(status_code=400, detail="password is incorrect")
     if result=="L":
-        return responses.JSONResponse(content={"message":"user already online"},status_code=400)
-    return {"message": f"successful login!{result}"}
+        raise HTTPException(status_code=400, detail="user already online")
+    access_token=create_access_token({"sub":username}, timedelta(minutes=30))
+    return {"access_token": access_token, "token_type":"bearer"}
 
 
 @router.get("/logout")
-async def logout(username: str):
+async def logout(username: str, token: str=Depends(oauth2_scheme)):
     """
     Log out a User, if username is not online return error
     """
@@ -46,7 +67,7 @@ async def logout(username: str):
     return {"message": "successful logout!"}
 
 @router.post("/{username}/role")
-async def add_editor(username: str, user: str):
+async def add_editor(username: str, user: str, token: str=Depends(oauth2_scheme)):
     """
     Change user role to editor, if username is incorrect return error
     Only administrators or editors can call this function
@@ -59,7 +80,7 @@ async def add_editor(username: str, user: str):
     return {"message": f"user {user} role updated successfully!"}
 
 @router.get("")
-async def get_user_list(username: str):
+async def get_user_list(username: str, token: str=Depends(oauth2_scheme)):
     """
     Get the user list from db, the return is in raw format(a list of user object)
     Only administrators can call this function
@@ -70,7 +91,7 @@ async def get_user_list(username: str):
     return users
 
 @router.get("/online")
-async def get_online_user_list(username: str):
+async def get_online_user_list(username: str, token: str=Depends(oauth2_scheme)):
     """
     Get the online user list from db, the return is in raw format(a list of user object)
     Only administrators can call this function

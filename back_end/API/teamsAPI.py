@@ -38,12 +38,14 @@ async def change_team(team_name:str, new_team_name:str):
     return {"message":"team name updated successfully!"}
 
 @router.post("/assess")
-async def assess_team(team_name: str):
+async def assess_team(username: str, team_name: str):
     """
     Confirm definetely the team name, if team inexistent or already confirmed definetely return error
     Only administrators or editors can call this function
     """
-    #controllo dell'user
+    role=svc.verify_role(username)
+    if role!="A" and role!="E":
+        return responses.JSONResponse(content={"message":"Forbidden Operation"},status_code=403)
     result=svc.assess_team(team_name)
     if result==1:
        return responses.JSONResponse(content={"message":"team_name is incorrect"}, status_code=400) 
@@ -52,12 +54,14 @@ async def assess_team(team_name: str):
     return {"message":"team confirmed successfully!"}
 
 @router.post("/modify")
-async def modify_team(team_name: str, new_team_name: str):
+async def modify_team(username: str, team_name: str, new_team_name: str):
     """
     Modify and confirm definetely the team name, if team inexistent return error
     Only administrators or editors can call this function
     """
-    #controllo dell'user
+    role=svc.verify_role(username)
+    if role!="A" and role!="E":
+        return responses.JSONResponse(content={"message":"Forbidden Operation"},status_code=403)
     if not svc.modify_team(team_name, new_team_name):
         return responses.JSONResponse(content={"message":"team_name is incorrect"}, status_code=400)
     return {"message":"team updated and confirmed successfully!"}
