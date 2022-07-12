@@ -9,22 +9,10 @@ from data.requested_matches import Requested_match
 from data.competitions import Competition
 from data.teams import Team
 from data.rules import n
-
-#from mainAPI import n non si può fare
+from passlib.context import CryptContext
+pwd_context= CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 #USERS_API
-
-def create_user(username: str, password: str) -> User:
-    """
-    Create User and add it to db, return True if operation is successful, False otherwise
-    """
-    user= User()
-    user.username=username
-    user.password=password
-    user.is_online=False # se è sempre così si può mettere default=False nella classe User
-    #Valore is_editor e is_administrator sono di default settati a False
-    user.save()
-    return user
 
 def find_user_by_username(username: str) -> User:
     """
@@ -35,6 +23,55 @@ def find_user_by_username(username: str) -> User:
     #User.objects().filter(username=username).first() query vera, se c'è un solo filtro posso usare ->
     user=User.objects(username=username).first()
     return user
+
+def hash_password(password):
+    """
+    Return the hashed password
+    """
+    return pwd_context.hash(password)
+
+# def verify_password(username: str, password: str):
+#     """
+#     Verify the plain password with the hashed password
+#     """
+#     user=find_user_by_username(username)
+#     if not user:
+#         return 1
+#     return pwd_context.verify(password, user.password)
+
+def create_user(username: str, password) -> User:
+    """
+    Create User and add it to db, return True if operation is successful, False otherwise
+    """
+    user= User()
+    user.username=username
+    user.password=hash_password(password)
+    user.is_online=False
+    #Valore is_editor e is_administrator sono di default settati a False
+    user.save()
+    return user
+
+def log_user(username: str, password: str):
+    """
+    Log a User verifying its password.
+    Return U if username is incorrect, P if password is incorrect, L if user already logged,
+    A if user is admin, E if user is admin and S if is a simple user
+    """
+    user:User=User.objects(username=username).first()
+    #L'operazione fallisce
+    if not user:
+        return "U"
+    if not pwd_context.verify(password, user.password):
+        return "P"
+    if user.is_online:
+        return "L"
+    #L'operazione ha successo
+    user.update(is_online=True)
+    if user.is_administrator:
+        return "A"
+    if user.is_editor:
+        return "E"
+    return "S"
 
 def verify_role(username: str):
     """
@@ -50,28 +87,6 @@ def verify_role(username: str):
     if user.is_editor:
         return "E"
     return "S" #simple User
-
-def log_user(username: str, password: str):
-    """
-    Log a User verifying its password.
-    Return U if username is incorrect, P if password is incorrect, L if user already logged,
-    A if user is admin, E if user is admin and S if is a simple user
-    """
-    user:User=User.objects(username=username).first()
-    #L'operazione fallisce
-    if not user:
-        return "U"
-    if user.password!=password:
-        return "P"
-    if user.is_online:
-        return "L"
-    #L'operazione ha successo
-    user.update(is_online=True)
-    if user.is_administrator:
-        return "A"
-    if user.is_editor:
-        return "E"
-    return "S"
 
 def add_editor(username: str) -> bool:
     """
@@ -104,18 +119,27 @@ def get_online_users() -> List[User]:
 
 #MATCHES_API
 
-def get_match_id(home_team: str, away_team: str, season: str, competition_name: str) -> ObjectId | None:
+def get_match_id(home_team: str, away_team: str, season: str, competition_name: str):
     """
     Return the id of the match identified by parameters
     """
+    competition_id=get_competition_id(competition_name)
+    if not competition_id:
+        return 1
+    home_team_id=get_team_id(home_team)
+    if not home_team_id:
+        return 2
+    away_team_id=get_team_id(away_team)
+    if not away_team_id:
+        return 3
     match: Match=Match.objects() \
-        .filter(home_team=home_team) \
-        .filter(away_team=away_team) \
+        .filter(home_team_id=home_team_id) \
+        .filter(away_team_id=away_team_id) \
         .filter(season=season) \
-        .filter(competition_name=competition_name) \
+        .filter(competition_id=competition_id) \
         .only('id').first()
     if not match:
-        return None
+        return 4
     return match.id
 
 def get_match(match_id: ObjectId) -> Match:
@@ -141,7 +165,7 @@ def get_completed_matches() -> List[Match]:
     """
     Return the list of the completed matches in the db
     """
-    c_matches: List[Match]=list(Match.objects(is_completed=True).only('home_team','away_team','competition_id','season','is_completed').all())
+    c_matches: List[Match]=list(Match.objects(is_completed=True).only('home_team_id','away_team_id','competition_id','season','is_completed').all())
     #debug
     for m in c_matches:
         print("Match {}-{}, competition_id {} season {}, completato? {}".format(m.home_team_id,m.away_team_id,m.competition_id,m.season,m.is_completed))
@@ -271,45 +295,6 @@ def change_match_report(match_id: ObjectId, new_report: str):
     match.journal.append("Match report updated")
     match.save()
     return 0
-    
-def validate_data(match_id: ObjectId, data_index: int, judgement: bool):
-    """
-    Add a judgement to the specified data.
-    If the data reach n endorsements it will be added to the event collection and it will start a check to all data, if all data are completed(reached n endorsements), the whole match will be considered completed
-    """
-    match=get_match(match_id)
-    if not match:
-        return 1
-    if match.data[data_index].author!=None: #data is confirmed
-        return 2
-    if judgement:
-        match.data[data_index].endorsements+=1
-        match.journal.append(f"Match data {match.data[data_index].time_slot} endorsed, it has now {match.data[data_index].endorsements} endorsements")
-        if match.data[data_index].endorsements>=n:
-            match.data[data_index].author=match.data[data_index].working
-            match.data[data_index].working=None #qui va bene che diventi None perchè non devo più toccarlo
-            match.journal.append(f"Match data {match.data[data_index].time_slot} is now confirmed because it reached {match.data[data_index].endorsements} endorsements")
-            #This analysis is added to collection Events
-            event=Event()
-            event.match_id=match_id
-            event.data_list[data_index].time_slot=match.data[data_index].time_slot
-            event.data_list[data_index].detail=match.data[data_index].detail
-            event.data_list[data_index].author=match.data[data_index].author
-            event.save()
-
-            if match.check_data:
-                match.is_completed=True
-                match.journal.append("Match is completed because every data reached {} endorsements".format(n))
-    else:
-        match.data[data_index].dislikes+=1
-        match.journal.append(f"Match data {match.data[data_index].time_slot} disliked, it has now {match.data[data_index].dislikes} dislikes")
-        if match.data[data_index].dislikes>=n:
-            match.data[data_index].working=""
-            match.data[data_index].author="" #così è nuovamente lavorabile
-            match.journal.append(f"Match data {match.data[data_index].time_slot} reached {match.data[data_index].dislikes} dislikes, it is suggested to change it")
-    
-    match.save()
-    return 0
 
 def get_match_report(match_id: ObjectId):
     """
@@ -391,6 +376,45 @@ def add_data(username: str, match_id: ObjectId, data_index: int, detail: str):#J
         return 3 
     match.data[data_index].detail=detail
     match.journal.append(f"User {username} ended working at time slot {match.data[data_index].time_slot}")
+    match.save()
+    return 0
+
+def validate_data(match_id: ObjectId, data_index: int, judgement: bool):
+    """
+    Add a judgement to the specified data.
+    If the data reach n endorsements it will be added to the event collection and it will start a check to all data, if all data are completed(reached n endorsements), the whole match will be considered completed
+    """
+    match=get_match(match_id)
+    if not match:
+        return 1
+    if match.data[data_index].author!="": #data is confirmed
+        return 2
+    if judgement:
+        match.data[data_index].endorsements+=1
+        match.journal.append(f"Match data {match.data[data_index].time_slot} endorsed, it has now {match.data[data_index].endorsements} endorsements")
+        if match.data[data_index].endorsements>=n:
+            match.data[data_index].author=match.data[data_index].working
+            match.data[data_index].working=None #qui va bene che diventi None perchè non devo più toccarlo
+            match.journal.append(f"Match data {match.data[data_index].time_slot} is now confirmed because it reached {match.data[data_index].endorsements} endorsements")
+            #This analysis is added to collection Events
+            event=Event()
+            event.match_id=match_id
+            event.data_list[data_index].time_slot=match.data[data_index].time_slot
+            event.data_list[data_index].detail=match.data[data_index].detail
+            event.data_list[data_index].author=match.data[data_index].author
+            event.save()
+
+            if match.check_data:
+                match.is_completed=True
+                match.journal.append("Match is completed because every data reached {} endorsements".format(n))
+    else:
+        match.data[data_index].dislikes+=1
+        match.journal.append(f"Match data {match.data[data_index].time_slot} disliked, it has now {match.data[data_index].dislikes} dislikes")
+        if match.data[data_index].dislikes>=n:
+            match.data[data_index].working=""
+            match.data[data_index].author="" #così è nuovamente lavorabile
+            match.journal.append(f"Match data {match.data[data_index].time_slot} reached {match.data[data_index].dislikes} dislikes, it is suggested to change it")
+    
     match.save()
     return 0
 
