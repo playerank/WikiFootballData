@@ -4,12 +4,12 @@ class Analysis(mongoengine.EmbeddedDocument):
     """
     Class defining an analysis
     """
-    time_slot=mongoengine.StringField(required=True)
-    detail=mongoengine.StringField() ##FileFiled??
-    working=mongoengine.StringField(required=True)
-    author=mongoengine.StringField(required=True)
-    endorsements=mongoengine.IntField(required=True)
-    dislikes=mongoengine.IntField(required=True)
+    time_slot: str=mongoengine.StringField(required=True)
+    detail=mongoengine.StringField() ##FileField?? DictField o ListField probabilmente, event pysoccer
+    working: str=mongoengine.StringField(required=True)
+    author: str=mongoengine.StringField(required=True)
+    endorsements: int=mongoengine.IntField(required=True)
+    dislikes: int=mongoengine.IntField(required=True)
 
     # @property
     # def init(self,time_slot: str):
