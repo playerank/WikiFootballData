@@ -9,7 +9,9 @@ from data.requested_matches import Requested_match
 from data.competitions import Competition
 from data.teams import Team
 from data.rules import n
+from data.reviews import Review
 from passlib.context import CryptContext
+
 pwd_context= CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 #USERS_API
@@ -379,7 +381,39 @@ def add_data(username: str, match_id: ObjectId, data_index: int, detail: str):#J
     match.save()
     return 0
 
-def validate_data(match_id: ObjectId, data_index: int, judgement: bool):
+def create_review(username: str, match_id: ObjectId, data_index: int, judgement: bool):
+    """
+    Create a Review and check some condition.
+    Return -1 if the user already validated this data, return 1 if the user changed the judgement from False to True, 
+    return 2 if the user changed the judgement from True to False
+    """
+    e_review: Review=Review.objects().filter(match_id=match_id).filter(data_index=data_index).first() #ritorna l'istanza che ha sia match_id che data_index uguali ai parametri
+    if e_review:
+        if judgement:#utente ha ora lasciato mi piace
+            if username in e_review.disliked: #ma prima aveva lasciato non mi piace
+                e_review.disliked.remove(username)
+                e_review.endorsed.append(username)
+                e_review.save()
+                return 1
+        else:#utente ha ora lasciato non mi piace
+            if username in e_review.endorsed:#ma prima aveva lasciato mi piace
+                e_review.endorsed.remove(username)
+                e_review.disliked.append(username)
+                e_review.save()
+                return 2
+        return -1 #se arrivo qui allora l'utente non ha cambiato valutazione
+    review=Review()
+    review.match_id=match_id
+    review.data_index=data_index
+    if judgement:
+        review.endorsed.append(username)
+    else:
+        review.disliked.append(username)
+    review.save()
+    return 0
+
+
+def validate_data(username: str, match_id: ObjectId, data_index: int, judgement: bool):
     """
     Add a judgement to the specified data.
     If the data reach n endorsements it will be added to the event collection and it will start a check to all data, if all data are completed(reached n endorsements), the whole match will be considered completed
@@ -389,9 +423,16 @@ def validate_data(match_id: ObjectId, data_index: int, judgement: bool):
         return 1
     if match.data[data_index].author!="": #data is confirmed
         return 2
-    if judgement:
+    if not match.data[data_index].detail:
+        return 3
+    result=create_review(username, match_id, data_index, judgement)
+    if result==-1:
+        return 4
+    if judgement:#endorsement
         match.data[data_index].endorsements+=1
-        match.journal.append(f"Match data {match.data[data_index].time_slot} endorsed, it has now {match.data[data_index].endorsements} endorsements")
+        if result==1:
+            match.data[data_index].dislikes-=1
+        match.journal.append(f"Match data {match.data[data_index].time_slot} endorsed by {username}, it has now {match.data[data_index].endorsements} endorsements")
         if match.data[data_index].endorsements>=n:
             match.data[data_index].author=match.data[data_index].working
             match.data[data_index].working=None #qui va bene che diventi None perchè non devo più toccarlo
@@ -407,14 +448,16 @@ def validate_data(match_id: ObjectId, data_index: int, judgement: bool):
             if match.check_data:
                 match.is_completed=True
                 match.journal.append("Match is completed because every data reached {} endorsements".format(n))
-    else:
+    else:#dislike
         match.data[data_index].dislikes+=1
-        match.journal.append(f"Match data {match.data[data_index].time_slot} disliked, it has now {match.data[data_index].dislikes} dislikes")
+        if result==2:
+            match.data[data_index].endorsements-=1
+        match.journal.append(f"Match data {match.data[data_index].time_slot} disliked by {username}, it has now {match.data[data_index].dislikes} dislikes")
         if match.data[data_index].dislikes>=n:
             match.data[data_index].working=""
             match.data[data_index].author="" #così è nuovamente lavorabile
             match.journal.append(f"Match data {match.data[data_index].time_slot} reached {match.data[data_index].dislikes} dislikes, it is suggested to change it")
-    
+            #devo fare altro?
     match.save()
     return 0
 
