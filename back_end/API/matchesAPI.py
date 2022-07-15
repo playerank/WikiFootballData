@@ -56,6 +56,7 @@ async def add_match(username: str, home_team: str, away_team: str, season: str, 
     """
     Add a new match to db
     """
+    #AGGIUNGERE TRY
     date=datetime.strptime(date_str, '%d/%m/%Y')
     result=svc.add_match(username,home_team,away_team,season,competition_name,round,date,link,extended_time,penalty)
     if result==1:
@@ -192,18 +193,22 @@ async def add_data(username: str, match_id, data_index: int, detail: str):#Json)
         return responses.JSONResponse(content={"message":"time_slot is being analyzed by another user"},status_code=400)
     return {"message":"match data updated successfully!"}
 
-@router.post("/validate")
-async def validate_data(match_id, data_index: int, judgement: bool):
+@router.post("/validate") #da testare
+async def validate_data(username: str, match_id, data_index: int, judgement: bool):
     """
     Add a new judgement to the match, if the match_id is incorrect or match data is already confirmed return error
     """
-    if data_index<0 or data_index>25:
-        return responses.JSONResponse(content={"message":f"data_index {data_index} is incorrect"},status_code=400)
-    result=svc.validate_data(match_id,data_index,judgement)
+    if data_index<0 or data_index>28:
+        return responses.JSONResponse(content={"message":"invalid data_index, it can be from 0 to 28"},status_code=400)
+    result=svc.validate_data(username,match_id,data_index,judgement)
     if result==1:
         return responses.JSONResponse(content={"message":"match_id is incorrect"},status_code=400)
     if result==2:
         return responses.JSONResponse(content={"message":"data already confirmed"},status_code=403)
+    if result==3:
+        return responses.JSONResponse(content={"message":"wrong data index"},status_code=400)
+    if result==4:
+        return responses.JSONResponse(content={"message":f"data already validated by {username}"},status_code=400)
     return {"message":"Data judgement updated successfully!"}
 
 @router.get("/journal")
