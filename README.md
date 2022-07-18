@@ -3,7 +3,8 @@
 
 # Goal
 
-To create a web platform accessible to all to share analytical football data which are processed by users through the [soccerLogger](https://github.com/playerank/soccerLogger)<br/> application. This data respect the standard format described by the [Pysoccer](https://github.com/playerank/pysoccer)<br/> library.
+To create a web platform accessible to all to share analytical football data which are processed by users through the [soccerLogger](https://github.com/playerank/soccerLogger)<br/> application.
+This data respect the standard format described by the [Pysoccer](https://github.com/playerank/pysoccer)<br/> library.
 
 # Description
 
