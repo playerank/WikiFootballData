@@ -159,8 +159,8 @@ def get_matches() -> List[Match]:
     """
     matches: List[Match]=list(Match.objects().all())
     #debug
-    for m in matches:
-        print("Match {}-{}, competition_id {} season_id {}, completato? {}".format(m.home_team_id,m.away_team_id,m.competition_id,m.season,m.is_completed))
+    # for m in matches:
+    #     print("Match {}-{}, competition_id {} season_id {}, completato? {}".format(m.home_team_id,m.away_team_id,m.competition_id,m.season,m.is_completed))
     return matches
 
 def get_completed_matches() -> List[Match]:
@@ -169,8 +169,8 @@ def get_completed_matches() -> List[Match]:
     """
     c_matches: List[Match]=list(Match.objects(is_completed=True).only('home_team_id','away_team_id','competition_id','season','is_completed').all())
     #debug
-    for m in c_matches:
-        print("Match {}-{}, competition_id {} season {}, completato? {}".format(m.home_team_id,m.away_team_id,m.competition_id,m.season,m.is_completed))
+    # for m in c_matches:
+    #     print("Match {}-{}, competition_id {} season {}, completato? {}".format(m.home_team_id,m.away_team_id,m.competition_id,m.season,m.is_completed))
     return c_matches
 
 def get_completed_data(match_id: ObjectId) -> List | int:
@@ -343,7 +343,7 @@ def get_free_time_slot(match_id: ObjectId):
         return 2
     free_time_slot: List[Analysis]=list()
     for d in match.data:
-        if d.working=="" and d.author=="":
+        if not d.working and not d.author:
             free_time_slot.append(d)
     return free_time_slot
 
@@ -357,7 +357,7 @@ def analyze_time_slot(username: str, match_id: ObjectId, data_index: int):
         return 1
     if match.is_completed:
         return 2
-    if match.data[data_index].working!="" or match.data[data_index].author!="":
+    if match.data[data_index].working!=None or match.data[data_index].author!=None:
         return 3
     match.data[data_index].working=username
     match.journal.append(f"User {username} started working at time slot {match.data[data_index].time_slot}")
@@ -432,7 +432,7 @@ def validate_data(username: str, match_id: ObjectId, data_index: int, judgement:
     match=get_match(match_id)
     if not match:
         return 1
-    if match.data[data_index].author!="": #data is confirmed
+    if match.data[data_index].author!=None: #data is confirmed
         return 2
     if not match.data[data_index].detail:
         return 3
@@ -446,7 +446,7 @@ def validate_data(username: str, match_id: ObjectId, data_index: int, judgement:
         match.journal.append(f"Match data {match.data[data_index].time_slot} endorsed by {username}, it has now {match.data[data_index].endorsements} endorsements")
         if match.data[data_index].endorsements>=n:
             match.data[data_index].author=match.data[data_index].working
-            match.data[data_index].working=None #qui va bene che diventi None perchè non devo più toccarlo
+            match.data[data_index].working="" #qui va bene che diventi "" perchè non devo più toccarlo
             match.journal.append(f"Match data {match.data[data_index].time_slot} is now confirmed because it reached {match.data[data_index].endorsements} endorsements")
             #This analysis is added to collection Events
             event=Event()
@@ -465,8 +465,8 @@ def validate_data(username: str, match_id: ObjectId, data_index: int, judgement:
             match.data[data_index].endorsements-=1
         match.journal.append(f"Match data {match.data[data_index].time_slot} disliked by {username}, it has now {match.data[data_index].dislikes} dislikes")
         if match.data[data_index].dislikes>=n:
-            match.data[data_index].working=""
-            match.data[data_index].author="" #così è nuovamente lavorabile
+            match.data[data_index].working=None
+            match.data[data_index].author=None #così è nuovamente lavorabile
             match.journal.append(f"Match data {match.data[data_index].time_slot} reached {match.data[data_index].dislikes} dislikes, it is suggested to change it")
             #devo fare altro?
     match.save()
