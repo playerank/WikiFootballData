@@ -1,11 +1,11 @@
-from fastapi import APIRouter, responses
+from fastapi import APIRouter, Depends, responses
+from usersAPI import oauth2_scheme
 import services.data_service as svc
 
 router = APIRouter(
     prefix="/competitions",
-    tags=["competitions"]#,#Possibile implementazione della sicurezza
-    # dependencies=[Depends(get_current_username)],
-    # responses={404: {"description":"not found"}},
+    tags=["competitions"],
+    dependencies=[Depends(oauth2_scheme)]
 )
 
 @router.get("")

@@ -1,7 +1,7 @@
 from datetime import datetime
-from bson import ObjectId
-from fastapi import APIRouter, responses 
+from fastapi import APIRouter, Depends, responses 
 from pydantic import HttpUrl, Json
+from usersAPI import oauth2_scheme
 import services.data_service as svc
 
 router = APIRouter(
@@ -12,7 +12,8 @@ router = APIRouter(
 @router.get("/completed_matches")
 async def get_completed_match_list():
     """
-    Get completed match list from db, even non-user can call this function
+    Get completed match list from db.
+    Even non-user can call this function
     """
     c_matches=svc.get_completed_matches()
     return c_matches
@@ -20,7 +21,8 @@ async def get_completed_match_list():
 @router.get("/completed_matches/data")
 async def get_completed_data(match_id):#id o nomi?
     """
-    Get completed match data from db, if the match_id is incorrect return error, even non-user can call this function
+    Get completed match data from db, if the match_id is incorrect return error.
+    Even non-user can call this function
     """
     c_data=svc.get_completed_data(match_id)
     if c_data==1:
@@ -31,7 +33,7 @@ async def get_completed_data(match_id):#id o nomi?
 
 
 @router.get("")
-async def get_match_list():
+async def get_match_list(token: str=Depends(oauth2_scheme)):
     """
     Get the match list from db
     """
@@ -39,7 +41,10 @@ async def get_match_list():
     return matches
 
 @router.get("/get_id")
-async def get_match_id(home_team: str, away_team: str, season: str, competition_name: str):
+async def get_match_id(home_team: str, away_team: str, season: str, competition_name: str, token: str=Depends(oauth2_scheme)):
+    """
+    Get the id of the match identified by parameters
+    """
     id=svc.get_match_id(home_team,away_team,season,competition_name)
     if id==1:
         return responses.JSONResponse(content={"message":f"competition {competition_name} is incorrect"},status_code=400)
@@ -52,12 +57,19 @@ async def get_match_id(home_team: str, away_team: str, season: str, competition_
     return {"message":f"id of the match={id}"}
 
 @router.post("/add")
-async def add_match(username: str, home_team: str, away_team: str, season: str, competition_name: str, round: str, date_str: str, link: HttpUrl, extended_time: bool, penalty: bool):
+async def add_match(username: str, home_team: str, away_team: str, season: str, competition_name: str, round: str, date_str: str, link: HttpUrl, extended_time: bool, penalty: bool, token: str=Depends(oauth2_scheme)):
     """
     Add a new match to db
     """
     #AGGIUNGERE TRY
-    date=datetime.strptime(date_str, '%d/%m/%Y')
+    try:
+        date=datetime.strptime(date_str, '%d/%m/%Y')
+    except ValueError:
+        try:
+            date=datetime.strptime(date_str, '%d/%m/%y')
+        except:
+            return responses.JSONResponse(content={"message":f"date {date_str} is in a wrong format"},status_code=400)
+    
     result=svc.add_match(username,home_team,away_team,season,competition_name,round,date,link,extended_time,penalty)
     if result==1:
         return responses.JSONResponse(content={"message":f"competition {competition_name} is incorrect"},status_code=400)
@@ -70,7 +82,7 @@ async def add_match(username: str, home_team: str, away_team: str, season: str, 
     return {"message":"match added successfully!"}
 
 @router.get("/get-data")
-async def get_data(match_id):
+async def get_data(match_id, token: str=Depends(oauth2_scheme)):
     """
     Get data of the match from db, if the match_id is incorrect return error
     """
@@ -92,7 +104,7 @@ async def change_match_name(match_id, home_team: str, away_team: str, season: st
     return {"message":"Match name updated successfully!"}
 
 @router.post("/change-link")
-async def change_match_link(match_id, new_link: HttpUrl):
+async def change_match_link(match_id, new_link: HttpUrl, token: str=Depends(oauth2_scheme)):
     """
     Change the link of the match, if match_id is incorrect or match link is already confirmed return error
     """
@@ -105,7 +117,7 @@ async def change_match_link(match_id, new_link: HttpUrl):
     
 
 @router.post("/change-report")
-async def change_match_report(match_id, report: str):
+async def change_match_report(match_id, report: str, token: str=Depends(oauth2_scheme)):
     """
     Change the report of the match, if match_id is incorrect or match report is already confirmed return error
     """
@@ -117,7 +129,7 @@ async def change_match_report(match_id, report: str):
     return {"message":"Match report updated successfully!"}
 
 @router.get("/get-report")
-async def get_match_report(match_id):
+async def get_match_report(match_id, token: str=Depends(oauth2_scheme)):
     """
     Get the match report from db, if the match_id is incorrect return error
     """
@@ -127,7 +139,7 @@ async def get_match_report(match_id):
     return report
 
 @router.post("/add-report")
-async def add_match_report(match_id, match_report: str):#Json):
+async def add_match_report(match_id, match_report: str, token: str=Depends(oauth2_scheme)):#report is Json?
     """
     Add the report to the match, if the match_id is incorrect return error
     """
@@ -140,7 +152,7 @@ async def add_match_report(match_id, match_report: str):#Json):
 
 
 @router.get("/get-workers")
-async def get_workers(match_id): #DA RIMUOVERE?
+async def get_workers(match_id, token: str=Depends(oauth2_scheme)): #NON IMPLEMENTATA BENE, si potrebbe rimuovere
     """
     Get the workers set of the match from db, if the match_id is incorrect return error
     """
@@ -150,7 +162,7 @@ async def get_workers(match_id): #DA RIMUOVERE?
     return worker_list
 
 @router.get("/get-free-slot")
-async def get_free_time_slot(match_id):
+async def get_free_time_slot(match_id, token: str=Depends(oauth2_scheme)):
     """
     Get the list of the free time slot of the match from db, if the match_id is incorrect or the match is completed return error
     """
@@ -162,7 +174,7 @@ async def get_free_time_slot(match_id):
     return time_slots
 
 @router.post("/analyze-slot")
-async def analyze_time_slot(username: str, match_id, data_index: int):
+async def analyze_time_slot(username: str, match_id, data_index: int, token: str=Depends(oauth2_scheme)):
     """
     Signal the server that a user started processing the time slot, if the match_id is incorrect, the match is completed or the time_slot is not free return error
     """
@@ -178,7 +190,7 @@ async def analyze_time_slot(username: str, match_id, data_index: int):
     return {"message":"working username set successfully!"}
 
 @router.post("/add-data")
-async def add_data(username: str, match_id, data_index: int, detail: str):#Json):
+async def add_data(username: str, match_id, data_index: int, detail: str, token: str=Depends(oauth2_scheme)):#detail is Json?
     """
     Add the result of the analysis to the db, if the match_id is incorrect return error
     """
@@ -193,8 +205,8 @@ async def add_data(username: str, match_id, data_index: int, detail: str):#Json)
         return responses.JSONResponse(content={"message":"time_slot is being analyzed by another user"},status_code=400)
     return {"message":"match data updated successfully!"}
 
-@router.post("/validate") #da testare
-async def validate_data(username: str, match_id, data_index: int, judgement: bool):
+@router.post("/validate")
+async def validate_data(username: str, match_id, data_index: int, judgement: bool, token: str=Depends(oauth2_scheme)):
     """
     Add a new judgement to the match, if the match_id is incorrect or match data is already confirmed return error
     """
@@ -212,7 +224,7 @@ async def validate_data(username: str, match_id, data_index: int, judgement: boo
     return {"message":"Data judgement updated successfully!"}
 
 @router.get("/journal")
-async def read_journal(match_id):
+async def read_journal(match_id, token: str=Depends(oauth2_scheme)):
     """
     Return the journal of the match, if the match_id is incorrect return error
     """
@@ -223,7 +235,7 @@ async def read_journal(match_id):
 
 
 @router.post("/assess-name")
-async def assess_name(username: str, match_id):
+async def assess_name(username: str, match_id, token: str=Depends(oauth2_scheme)):
     """
     Confirm definitely the match name in the db, if the match_id is incorrect or match_name already confirmed return error
     Only administrators or editors can call this function
@@ -238,7 +250,7 @@ async def assess_name(username: str, match_id):
         return responses.JSONResponse(content={"message":"match_name already confirmed"},status_code=400)
     return {"message":"match_name confirmed successfully!"}
 
-@router.post("/modify-name")
+@router.post("/modify-name") #da testare
 async def modify_name(username: str, match_id, home_team: str, away_team: str, season: str, competition_name: str, round: str, date: datetime, link: HttpUrl, extended_time: bool, penalty: bool):
     """
     Modify and confirm definitely the match name in the db, if the match_name is incorrect return error
@@ -253,7 +265,7 @@ async def modify_name(username: str, match_id, home_team: str, away_team: str, s
     return {"message":"Match name updated successfully!"}
 
 @router.post("/assess-link")
-async def assess_link(username: str,match_id):
+async def assess_link(username: str,match_id, token: str=Depends(oauth2_scheme)):
     """
     Confirm definitely the match link in the db, if the match_name is incorrect return error
     Only administrators or editors can call this function
@@ -269,7 +281,7 @@ async def assess_link(username: str,match_id):
     return {"message":"link confirmed successfully!"}
 
 @router.post("/modify-link")
-async def modify_link(username: str,match_id, link: HttpUrl):
+async def modify_link(username: str,match_id, link: HttpUrl, token: str=Depends(oauth2_scheme)):
     """
     Modify and confirm definitely the match link in the db, if the match_name is incorrect return error
     Only administrators or editors can call this function
@@ -281,8 +293,8 @@ async def modify_link(username: str,match_id, link: HttpUrl):
         return responses.JSONResponse(content={"message":"match_id is incorrect"},status_code=400)
     return {"message":"link updated and confirmed successfully!"}
 
-@router.post("/assess-report") #check
-async def assess_match_report(username: str, match_id):
+@router.post("/assess-report")
+async def assess_match_report(username: str, match_id, token: str=Depends(oauth2_scheme)):
     """
     Confirm definitely the match report in the db, if the match_name is incorrect return error
     Only administrators or editors can call this function
@@ -298,7 +310,7 @@ async def assess_match_report(username: str, match_id):
     return {"message":"Report confirmed successfully!"}
 
 @router.post("/modify-report")
-async def modify_match_report(username: str, match_id, report: str):
+async def modify_match_report(username: str, match_id, report: str, token: str=Depends(oauth2_scheme)):
     """
     Modify and confirm definitely the match report in the db, if the match_name is incorrect return error
     Only administrators or editors can call this function

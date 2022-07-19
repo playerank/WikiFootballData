@@ -49,7 +49,7 @@ async def get_help():
     return responses.HTMLResponse(content=body)
 
 @app.get("/rules")
-async def get_N(username: str):
+async def get_N(username: str, token: str=Depends(usersAPI.oauth2_scheme)):
     """
     Return the value of N
     Only administrators can call this funcion
@@ -59,7 +59,7 @@ async def get_N(username: str):
     return n
 
 @app.post("/change-N")
-async def change_N(username: str, new_value: int):
+async def change_N(username: str, new_value: int, token: str=Depends(usersAPI.oauth2_scheme)):
     """
     Change the value of N, it's not retroactive, if new_value is incorrect return error
     Only administrators can call this function

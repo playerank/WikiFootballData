@@ -1,6 +1,9 @@
 from typing import Dict
 from fastapi import APIRouter, Depends, HTTPException, responses
 import services.data_service as svc
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from datetime import datetime,timedelta
+from jose import jwt
 
 router = APIRouter(
     prefix="/users",
@@ -9,13 +12,9 @@ router = APIRouter(
 
 SECRET_KEY='Q3HSkAyAeeX7yKfdfC2xWaSsZQJKI3CILskncv0Z9ZcmO5cRGEpmeB9GRAVP53z1' #64
 ALGORITHM="HS256"
-##RICORDARSI DI FARE LAVORI ESTETICI (come strip(), etc)
-#Molto probabilmente da fare nel main
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from datetime import datetime,timedelta
-from jose import jwt
 
 oauth2_scheme= OAuth2PasswordBearer(tokenUrl="/users/login")
+
 
 def create_access_token(data: Dict[str, str], expires_delta: timedelta):
     to_encode= data.copy()
@@ -24,6 +23,7 @@ def create_access_token(data: Dict[str, str], expires_delta: timedelta):
     encoded_jwt=jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
+##RICORDARSI DI FARE LAVORI ESTETICI (come strip(), etc)
 @router.post("/sign_up")
 async def sign_up(username: str, password: str):
     """
@@ -66,7 +66,7 @@ async def logout(username: str, token: str=Depends(oauth2_scheme)):
     user.update(is_online=False)
     return {"message": "successful logout!"}
 
-@router.post("/{username}/role")
+@router.post("/role")
 async def add_editor(username: str, user: str, token: str=Depends(oauth2_scheme)):
     """
     Change user role to editor, if username is incorrect return error

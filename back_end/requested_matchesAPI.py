@@ -3,9 +3,7 @@ import services.data_service as svc
 
 router = APIRouter(
     prefix="/requested_matches",
-    tags=["requested_matches"],
-    #dependencies=[Depends(get_token_header)],
-    #responses={404: {"description": "Not found"}},
+    tags=["requested_matches"]
 )
 
 @router.get("/")
