@@ -384,42 +384,40 @@ def add_data(username: str, match_id: ObjectId, data_index: int, detail: str):#J
 def create_review(username: str, match_id: ObjectId, data_index: int, judgement: bool):
     """
     Create a Review and check some condition.
-    Return -1 if the user already validated this data, return 1 if the user changed the judgement from False to True, 
-    return 2 if the user changed the judgement from True to False
+    Return -1 if the user already validated this data, return 1 if the user removed the endorsement, return 2 if the user changed the judgement from False to True,
+    return 3 if the user removed the dislike, return 4 if the user changed the judgement from True to False
     """
-    e_review: Review=Review.objects().filter(match_id=match_id).filter(data_index=data_index).first() #ritorna l'istanza che ha sia match_id che data_index uguali ai parametri
+    e_review: Review=Review.objects() \
+        .filter(match_id=match_id) \
+        .filter(data_index=data_index) \
+        .filter(username=username) \
+        .first() #ritorna l'istanza che ha match_id, data_index e username uguali ai parametri
     if e_review:
-        if username in e_review.disliked: #utente aveva messo non mi piace
-            if judgement:#ma ora vuole mettere mi piace
-                e_review.disliked.remove(username)
-                e_review.endorsed.append(username)
-                e_review.save()
+        if judgement:
+            if e_review.type=="e":#vuole rimuovere mi piace
+                e_review.delete()
                 return 1
-            else:#non ha cambiato valutazione
-                return -1
-        elif username in e_review.endorsed:#utente aveva messo mi piace
-            if not judgement:#ma ora vuole mettere non mi piace
-                e_review.endorsed.remove(username)
-                e_review.disliked.append(username)
+            else:#vuole cambiare da dislike a endorsement
+                e_review.type="e"
                 e_review.save()
                 return 2
-            else:#non ha cambiato valutazione
-                return -1
-        #se arrivo qui è un nuovo utente a dare una valutazione
-        if judgement:
-            e_review.endorsed.append(username)
         else:
-            e_review.disliked.append(username)
-        e_review.save()
-        return 0
+            if e_review.type=="d":#vuole rimuovere non mi piace
+                e_review.delete()
+                return 3
+            else:
+                e_review.type="d"
+                e_review.save()
+                return 4
     #se arrivo qui non esiste review
     review=Review()
     review.match_id=match_id
     review.data_index=data_index
+    review.username=username
     if judgement:
-        review.endorsed.append(username)
+        review.type="e"
     else:
-        review.disliked.append(username)
+        review.type="d"
     review.save()
     return 0
 
@@ -437,12 +435,16 @@ def validate_data(username: str, match_id: ObjectId, data_index: int, judgement:
     if not match.data[data_index].detail:
         return 3
     result=create_review(username, match_id, data_index, judgement)
-    if result==-1:
-        return 4
     if judgement:#endorsement
-        match.data[data_index].endorsements+=1
         if result==1:
+           match.data[data_index].endorsements-=1
+           match.journal.append(f"User {username} removed the endorsement to match data {match.data[data_index].time_slot}, it has now {match.data[data_index].endorsements} endorsements")
+           match.save()
+           return 0
+        match.data[data_index].endorsements+=1
+        if result==2:
             match.data[data_index].dislikes-=1
+            match.journal.append(f"User {username} removed the dislike to match data {match.data[data_index].time_slot}, it has now {match.data[data_index].dislikes} dislikes")
         match.journal.append(f"Match data {match.data[data_index].time_slot} endorsed by {username}, it has now {match.data[data_index].endorsements} endorsements")
         if match.data[data_index].endorsements>=n:
             match.data[data_index].author=match.data[data_index].working
@@ -460,9 +462,15 @@ def validate_data(username: str, match_id: ObjectId, data_index: int, judgement:
                 match.is_completed=True
                 match.journal.append("Match is completed because every data reached {} endorsements".format(n))
     else:#dislike
+        if result==3:
+            match.data[data_index].dislikes-=1
+            match.journal.append(f"User {username} removed the dislike to match data {match.data[data_index].time_slot}, it has now {match.data[data_index].dislikes} dislikes")
+            match.save()
+            return 0
         match.data[data_index].dislikes+=1
-        if result==2:
+        if result==4:
             match.data[data_index].endorsements-=1
+            match.journal.append(f"User {username} removed the endorsement to match data {match.data[data_index].time_slot}, it has now {match.data[data_index].endorsements} endorsements")
         match.journal.append(f"Match data {match.data[data_index].time_slot} disliked by {username}, it has now {match.data[data_index].dislikes} dislikes")
         if match.data[data_index].dislikes>=n:
             match.data[data_index].working=None
