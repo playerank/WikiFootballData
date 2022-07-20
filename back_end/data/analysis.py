@@ -7,7 +7,7 @@ class Analysis(mongoengine.EmbeddedDocument):
     time_slot: str=mongoengine.StringField(required=True)
     detail=mongoengine.StringField() ##FileField?? DictField o ListField probabilmente, event pysoccer
     working: str=mongoengine.StringField(required=True)
-    author: str=mongoengine.StringField(required=True)
+    author: str=mongoengine.StringField()
     endorsements: int=mongoengine.IntField(required=True)
     dislikes: int=mongoengine.IntField(required=True)
 
