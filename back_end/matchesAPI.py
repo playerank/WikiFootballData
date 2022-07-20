@@ -61,7 +61,6 @@ async def add_match(username: str, home_team: str, away_team: str, season: str, 
     """
     Add a new match to db
     """
-    #AGGIUNGERE TRY
     try:
         date=datetime.strptime(date_str, '%d/%m/%Y')
     except ValueError:
@@ -206,7 +205,7 @@ async def add_data(username: str, match_id, data_index: int, detail: str, token:
     return {"message":"match data updated successfully!"}
 
 @router.post("/validate")
-async def validate_data(username: str, match_id, data_index: int, judgement: bool, token: str=Depends(oauth2_scheme)):
+async def validate_data(username: str, match_id, data_index: int, judgement: bool): #token: str=Depends(oauth2_scheme)):
     """
     Add a new judgement to the match, if the match_id is incorrect or match data is already confirmed return error
     """
@@ -219,8 +218,6 @@ async def validate_data(username: str, match_id, data_index: int, judgement: boo
         return responses.JSONResponse(content={"message":"data already confirmed"},status_code=403)
     if result==3:
         return responses.JSONResponse(content={"message":"no detail to validate"},status_code=400)
-    if result==4:
-        return responses.JSONResponse(content={"message":f"data already validated by {username}"},status_code=400)
     return {"message":"Data judgement updated successfully!"}
 
 @router.get("/journal")
