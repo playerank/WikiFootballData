@@ -10,21 +10,23 @@ router = APIRouter(
 )
 
 @router.get("/completed_matches")
-async def get_completed_match_list():
+async def get_completed_match_list(n: int):
     """
-    Get completed match list from db.
+    Get n completed matches from db.
     Even non-user can call this function
     """
-    c_matches=svc.get_completed_matches()
+    if n<=0:
+        return responses.JSONResponse(content={"message":"invalid value"},status_code=400)
+    c_matches=svc.get_completed_matches(n)
     return c_matches
 
 @router.get("/completed_matches/data")
-async def get_completed_data(match_id):#id o nomi?
+async def get_completed_match_data(match_id):
     """
     Get completed match data from db, if the match_id is incorrect return error.
     Even non-user can call this function
     """
-    c_data=svc.get_completed_data(match_id)
+    c_data=svc.get_completed_match_data(match_id)
     if c_data==1:
         return responses.JSONResponse(content={"message":"match_id is incorrect"},status_code=400)
     if c_data==2:
@@ -33,12 +35,24 @@ async def get_completed_data(match_id):#id o nomi?
 
 
 @router.get("")
-async def get_match_list(token: str=Depends(oauth2_scheme)):
+async def get_match_list(n: int, token: str=Depends(oauth2_scheme)):
     """
-    Get the match list from db
+    Get n matches from db, if n==0 then return all matches
     """
-    matches=svc.get_matches()
+    if n<0:
+        return responses.JSONResponse(content={"message":"invalid value"},status_code=400)
+    matches=svc.get_matches(n)
     return matches
+
+@router.get("/not_completed")
+async def get_not_completed_match_list(n: int, token: str=Depends(oauth2_scheme)):
+    """
+    Get n not completed matches from db, if n==0 then return all not completed matches
+    """
+    if n<0:
+        return responses.JSONResponse(content={"message":"invalid value"},status_code=400)
+    nc_matches=svc.get_not_completed_matches(n)
+    return nc_matches
 
 @router.get("/get_id")
 async def get_match_id(home_team: str, away_team: str, season: str, competition_name: str, token: str=Depends(oauth2_scheme)):
@@ -89,6 +103,18 @@ async def get_data(match_id, token: str=Depends(oauth2_scheme)):
     if not data:
         return responses.JSONResponse(content={"message":"match_id is incorrect"},status_code=400)
     return data
+
+@router.get("/get_elaborated_data")
+async def get_elaborated_data(match_id, n: int, token: str=Depends(oauth2_scheme)):
+    """
+    Get n elaborated data of the match from db, if n==0 get all elaborated data of the match
+    """
+    if n<0:
+        return responses.JSONResponse(content={"message":"invalid n value"},status_code=400)
+    e_data=svc.get_elaborated_data(match_id, n)
+    if not e_data:
+        return responses.JSONResponse(content={"message":"this match doesn't have any elaborated data"},status_code=400)
+    return e_data
 
 @router.post("/change-name") #da testare
 async def change_match_name(match_id, home_team: str, away_team: str, season: str, competition_name: str, round: str, date: datetime, link: HttpUrl, extended_time: bool, penalty: bool):

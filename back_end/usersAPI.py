@@ -80,14 +80,16 @@ async def add_editor(username: str, user: str, token: str=Depends(oauth2_scheme)
     return {"message": f"user {user} role updated successfully!"}
 
 @router.get("")
-async def get_user_list(username: str, token: str=Depends(oauth2_scheme)):
+async def get_user_list(username: str, n: int, token: str=Depends(oauth2_scheme)):
     """
-    Get the user list from db, the return is in raw format(a list of user object)
+    Get n users from db, if n==0 then return all users
     Only administrators can call this function
     """
+    if n<0:
+        return responses.JSONResponse(content={"message":"invalid value"},status_code=400)
     if svc.verify_role(username)!="A":
         return responses.JSONResponse(content={"message":"Forbidden Operation"},status_code=403)
-    users=svc.get_users()
+    users=svc.get_users(n)
     return users
 
 @router.get("/online")
