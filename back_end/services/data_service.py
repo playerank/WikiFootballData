@@ -102,11 +102,14 @@ def add_editor(username: str) -> bool:
     new_editor.update(is_editor=True)
     return True
 
-def get_users() -> List[User]:
+def get_users(n: int) -> List[User]:
     """
-    Return the list of all Users in the db (clearly not the passwords)
+    Return the list of n Users in the db (clearly not the passwords)
     """
-    users:List[User]=list(User.objects().only('username','is_online','is_editor','is_administrator').all())
+    if n==0:
+        users:List[User]=list(User.objects().only('username','is_online','is_editor','is_administrator').all())
+    else:
+        users:List[User]=list(User.objects[:n].only('username','is_online','is_editor','is_administrator'))
     #debug
     # for u in users:
     #     print("Utente {}: online {}, editor {}, administrator {}".format(u.username,u.is_online,u.is_editor,u.is_administrator))
@@ -153,27 +156,43 @@ def get_match(match_id: ObjectId) -> Match:
     #print("Trovato Match {}-{}, competition_id {} season {}, completato? {}".format(match.home_team_id,match.away_team_id,match.competition_id,match.season,match.is_completed))
     return match
 
-def get_matches() -> List[Match]:
+def get_matches(n: int) -> List[Match]:
     """
-    Retrun the list of the matches in the db
+    Retrun list of n matches in the db
     """
-    matches: List[Match]=list(Match.objects().all())
+    if n==0:
+        matches: List[Match]=list(Match.objects().all())
+    else:
+        matches: List[Match]=list(Match.objects[:n])
     #debug
     # for m in matches:
     #     print("Match {}-{}, competition_id {} season_id {}, completato? {}".format(m.home_team_id,m.away_team_id,m.competition_id,m.season,m.is_completed))
     return matches
 
-def get_completed_matches() -> List[Match]:
+def get_not_completed_matches(n: int) -> List[Match]:
     """
-    Return the list of the completed matches in the db
+    Return list of n not completed matches in the db
     """
-    c_matches: List[Match]=list(Match.objects(is_completed=True).only('home_team_id','away_team_id','competition_id','season','is_completed').all())
+    if n==0:
+        nc_matches: List[Match]=list(Match.objects(is_completed=False).all())
+    else:
+        nc_matches: List[Match]=list(Match.objects[:n].filter(is_completed=False))
+    return nc_matches
+
+def get_completed_matches(n: int) -> List[Match]:
+    """
+    Return the list of n completed matches in the db
+    """
+    if n==0:
+        c_matches: List[Match]=list(Match.objects(is_completed=True).all())
+    else:
+        c_matches: List[Match]=list(Match.objects[:n].filter(is_completed=True))
     #debug
     # for m in c_matches:
     #     print("Match {}-{}, competition_id {} season {}, completato? {}".format(m.home_team_id,m.away_team_id,m.competition_id,m.season,m.is_completed))
     return c_matches
 
-def get_completed_data(match_id: ObjectId) -> List | int:
+def get_completed_match_data(match_id: ObjectId) -> List | int:
     """
     Return the list of data of the match identified by match_id, 1 if match_id incorrect, 2 if match is not completed
     """
@@ -217,7 +236,7 @@ def add_match(username: str, home_team: str, away_team: str, season: str, compet
     match.save()
     return 0
 
-def get_data(match_id: ObjectId) -> List | None:
+def get_data(match_id: ObjectId) -> List[Analysis] | None:
     """
     Return the list of data of the match identified by match_id
     """
@@ -225,6 +244,27 @@ def get_data(match_id: ObjectId) -> List | None:
     if not match:
         return None
     return match.data
+
+def get_elaborated_data(match_id: ObjectId, n: int) -> List | None:
+    """
+    Return the list of n elaborated data of the match identified by match_id
+    """
+    match: Match=Match.objects(id=match_id).only('data').first()
+    if not match:
+        return None
+    if match.is_completed:
+        return match.data
+    elaborated_data: List[Analysis]=list()
+    if n==0:
+        n=30
+    for d in match.data:
+        if d.author!=None:
+            elaborated_data.append(d)
+            if n==0:
+                break
+            n-=1
+    return elaborated_data
+
 
 def change_name(check: bool, match_id, home_team: str, away_team: str, season: str, competition_name: str, round: str, date: datetime, link: HttpUrl, extended_time: bool, penalty: bool):
     """
