@@ -9,11 +9,13 @@ router = APIRouter(
 )
 
 @router.get("")
-async def get_competition_list():
+async def get_competition_list(n: int):
     """
-    Return the competition list from db
+    Return n competitions from db, if n==0 then return all competitions
     """
-    competition_list=svc.get_competitions()
+    if n<0:
+        return responses.JSONResponse(content={"message":"invalid value"},status_code=400)
+    competition_list=svc.get_competitions(n)
     return competition_list
 
 @router.post("/add")

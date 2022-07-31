@@ -7,11 +7,13 @@ router = APIRouter(
 )
 
 @router.get("/")
-async def get_requested_match_list():
+async def get_requested_match_list(n: int):
     """
-    Get the requested_match list
+    Get n requested matches, if n==0 then return all requested matches
     """
-    requested_match_list=svc.get_requested_matches()
+    if n<0:
+        return responses.JSONResponse(content={"message":"invalid value"},status_code=400)
+    requested_match_list=svc.get_requested_matches(n)
     return requested_match_list
 
 @router.post("/add_match")

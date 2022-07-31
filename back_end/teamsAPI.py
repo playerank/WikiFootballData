@@ -9,11 +9,13 @@ router = APIRouter(
 )
 
 @router.get("")
-async def get_team_list():
+async def get_team_list(n: int):
     """
-    Return the team list from db
+    Return n teams from db, if n==0 then return all teams
     """
-    teams=svc.get_teams()
+    if n<0:
+        return responses.JSONResponse(content={"message":"invalid value"},status_code=400)
+    teams=svc.get_teams(n)
     return teams
 
 @router.post("/add")
@@ -26,7 +28,7 @@ async def add_team(team_name: str):
     return {"message":"team added succesfully!"}
 
 @router.post("/change")
-async def change_team(team_name:str, new_team_name:str):
+async def change_team(team_name: str, new_team_name: str):
     """
     Change the team name, if team inexistent or already confirmed definetely return error
     """

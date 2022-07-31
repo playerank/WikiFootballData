@@ -4,7 +4,7 @@ import matchesAPI
 import requested_matchesAPI
 import competitionsAPI
 import teamsAPI
-import playerAPI
+import playersAPI
 import data.mongo_setup as mongo_setup
 from data.rules import n
 import services.data_service as svc
@@ -15,8 +15,12 @@ app.include_router(matchesAPI.router)
 app.include_router(requested_matchesAPI.router)
 app.include_router(competitionsAPI.router)
 app.include_router(teamsAPI.router)
-app.include_router(playerAPI.router)
+app.include_router(playersAPI.router)
 
+#ROBOMONGO sostituto di mongoDBcompass
+
+#cd '.\Progetto wikiFootballData\back_end\API'
+#uvicorn mainAPI:app --reload
 mongo_setup.global_init()
 
 @app.get("/")

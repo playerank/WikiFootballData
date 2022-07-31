@@ -32,12 +32,11 @@ async def sign_up(username: str, password: str):
     existing_user=svc.find_user_by_username(username)
     if existing_user:
         return responses.JSONResponse(content={"message":f"username {username} already exists"},status_code=400)
-    #hashed_password=hash_password(password)
     new_user=svc.create_user(username,password)
     return {"message":"user created succesfully!"}#id={new_user.id} debug
 
 @router.post("/login")
-async def login(form_data: OAuth2PasswordRequestForm= Depends()):#username: str, password: str):
+async def login(form_data: OAuth2PasswordRequestForm= Depends()):
     """
     Log in a new User, if username doesen't exist or password is incorrect return error.
     FUNCTION CALLED AUTOMATICALLY BY THE SECURITY SYSTEM DO NOT CALL IT
