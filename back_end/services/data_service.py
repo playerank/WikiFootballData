@@ -10,6 +10,7 @@ from data.competitions import Competition
 from data.teams import Team
 from data.rules import n
 from data.reviews import Review
+from data.players import Player
 from passlib.context import CryptContext
 
 pwd_context= CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -31,15 +32,6 @@ def hash_password(password):
     Return the hashed password
     """
     return pwd_context.hash(password)
-
-# def verify_password(username: str, password: str):
-#     """
-#     Verify the plain password with the hashed password
-#     """
-#     user=find_user_by_username(username)
-#     if not user:
-#         return 1
-#     return pwd_context.verify(password, user.password)
 
 def create_user(username: str, password) -> User:
     """
@@ -104,7 +96,7 @@ def add_editor(username: str) -> bool:
 
 def get_users(n: int) -> List[User]:
     """
-    Return the list of n Users in the db (clearly not the passwords)
+    Return the list of n Users from the db (clearly not the passwords)
     """
     if n==0:
         users:List[User]=list(User.objects().only('username','is_online','is_editor','is_administrator').all())
@@ -604,11 +596,14 @@ def modify_report(username: str, match_id: ObjectId, report: HttpUrl) -> bool:
 
 #REQUESTED_MATCHES_API
 
-def get_requested_matches() -> List[Requested_match]:
+def get_requested_matches(n: int) -> List[Requested_match]:
     """
-    Return the list of the requested_matches
+    Return the list of n requested matches
     """
-    r_matches:List[Requested_match]=list(Requested_match.objects().all())
+    if n==0:
+        r_matches:List[Requested_match]=list(Requested_match.objects().all())
+    else:
+        r_matches:List[Requested_match]=list(Requested_match.objects[:n])
     #debug
     # for r in r_matches:
     #     print("r_match {} - {}, {} {}".format(r.home_team,r.away_team,r.competition_name,r.season_name))
@@ -655,11 +650,14 @@ def get_competition(competition_name: str) -> Competition:
     competition: Competition=Competition.objects(competition_name=competition_name).first()
     return competition
 
-def get_competitions() -> List[Competition]:
+def get_competitions(n: int) -> List[Competition]:
     """
-    Return the list of the competitions in the db
+    Return the list of n competitions from the db
     """
-    competitions:List[Competition]=list(Competition.objects().all())
+    if n==0:
+        competitions: List[Competition]=list(Competition.objects().all())
+    else:
+        competitions: List[Competition]=list(Competition.objects[:n])
     #debug
     # for c in competitions:
     #     print("Competizione {}, codice {}, confermata? {}".format(c.competition_name,c.competition_code,c.is_confirmed))
@@ -740,11 +738,14 @@ def get_team(team_name: str) -> Team:
     team: Team=Team.objects(team_name=team_name).first()
     return team
 
-def get_teams() -> List[Team]:
+def get_teams(n: int) -> List[Team]:
     """
-    Return the list of the teams in the db
+    Return the list of n teams from the db
     """
-    teams:List[Team]=list(Team.objects().all())
+    if n==0:
+        teams:List[Team]=list(Team.objects().all())
+    else:
+        teams:List[Team]=list(Team.objects[:n])
     #debug
     # for t in teams:
     #     print("Squadra {}, confermata? {}".format(t.team_name,t.is_confirmed))
@@ -799,3 +800,99 @@ def modify_team(team_name: str, new_team_name: str) -> bool:
         return False
     team.update(team_name=new_team_name, is_confirmed=True)
     return True
+
+#PLAYERS_API
+
+def get_player(player_name: str, nationality: str, current_team: str) -> Player:
+    """
+    Return the player identified by player_name
+    """
+    player: Player=Player.objects().filter(player_name=player_name).filter(current_team=current_team).filter(nationality=nationality).first()
+    return player
+
+def get_players(n: int):
+    """
+    Return list of n players from db
+    """
+    if n==0:
+        players:List[Player]=list(Player.objects().all())
+    else:
+        players:List[Player]=list(Player.objects[:n])
+    return players
+
+def add_player(player_name: str, nationality: str, current_team: str, club_shirt_number: int, national_team_shirt_number: int):
+    """
+    Create a player and add it to the db.
+    Return 1 if club shirt number is invalid, 2 if already exists in the db
+    """
+    if club_shirt_number<=0 and current_team!="free agent":
+        return 1
+    if national_team_shirt_number==0 or national_team_shirt_number<=0:
+        national_team_shirt_number=-1
+    e_player=get_player(player_name, nationality, current_team)
+    if e_player:
+        return 2
+    player=Player()
+    player.player_name=player_name
+    player.nationality=nationality
+    player.current_team=current_team
+    player.club_shirt_number=club_shirt_number
+    player.national_team_shirt_number=national_team_shirt_number
+    player.save()
+    return 0
+
+def change_player(player_name: str, nationality: str, current_team: str, new_player_name: str, new_nationality: str, new_current_team: str, check: bool):
+    """
+    Change the name of an existing team and if not check confirm it definetely
+    Return 1 if the player doesn't exist, 2 if check and the team is already confirmed
+    """
+    e_player=get_player(player_name, nationality, current_team)
+    if not e_player:
+        return 1
+    if check and e_player.is_confirmed:
+        return 2
+    if new_player_name!=" ":
+        e_player.player_name=new_player_name
+    if new_nationality!=" ":
+        e_player.nationality=new_nationality
+    if new_current_team!=" ":
+        e_player.current_team=new_current_team
+    if not check:
+        e_player.is_confirmed=True
+    e_player.save()
+    return 0
+
+def assess_player(player_name: str, nationality: str, current_team: str):
+    """
+    Confirm an existing player.
+    Return 1 if the player doesn't exist, 2 if the player is already confirmed
+    """
+    e_player=get_player(player_name, nationality, current_team)
+    if not e_player:
+        return 1
+    if e_player.is_confirmed:
+        return 2
+    e_player.update(is_confirmed=True)
+    return 0
+
+def update_player_conditions(player_name: str, nationality: str, current_team: str, new_team: str, new_club_shirt_number: int, new_national_team_shirt_number: int):
+    """
+    Update the condition of an existing player.
+    Return 1 if the player doesn't exist, 2 if new_club_shirt_number is invalid
+    """
+    if new_club_shirt_number<=0 and (new_team!="free agent" or (new_team!=" " and current_team!="free agent")):
+        return 1
+    e_player=get_player(player_name, nationality, current_team)
+    if not e_player:
+        return 2
+    if new_team!=" ":
+        e_player.current_team=new_team
+    if new_national_team_shirt_number>0:
+        e_player.national_team_shirt_number=new_national_team_shirt_number
+    e_player.club_shirt_number=new_club_shirt_number
+    e_player.save()
+    return 0
+    
+    
+    
+    
