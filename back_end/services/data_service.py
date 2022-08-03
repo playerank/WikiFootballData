@@ -16,8 +16,7 @@ from passlib.context import CryptContext
 pwd_context= CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 #USERS_API
-
-def find_user_by_username(username: str) -> User:
+def get_user(username: str) -> User:
     """
     Return the User indentified by username
     """
@@ -71,7 +70,7 @@ def verify_role(username: str):
     """
     Return the role of the User identified by username
     """
-    user=find_user_by_username(username)
+    user=get_user(username)
     if not user:
         return "U"
     if not user.is_online:
@@ -266,8 +265,7 @@ def change_name(check: bool, match_id, home_team: str, away_team: str, season: s
     match=get_match(match_id)
     if not match:
         return 1
-    if check:
-        if match.is_confirmed:
+    if check and match.is_confirmed:
             return 2
     if match.extended_time!=extended_time or match.penalty!=penalty:
         match.extended_time=extended_time
@@ -354,7 +352,7 @@ def add_match_report(match_id: ObjectId, report):
     match.save()
     return 0
 
-def get_workers(match_id: ObjectId) -> List | None:
+def get_workers(match_id: ObjectId) -> List[str] | None:
     """
     Return the list of the user that worked on the match identified by match_id
     """
@@ -678,7 +676,7 @@ def add_competition(competition_name: str) -> bool:
     competition.save()
     return True
 
-def change_competition_name(competition_name: str, new_competition_name: str) -> int:
+def change_competition_name(competition_name: str, new_competition_name: str):
     """
     Change the name of an existing competition.
     Return 1 if the competition doesn't exist, 2 if the competition is already confirmed
@@ -691,7 +689,7 @@ def change_competition_name(competition_name: str, new_competition_name: str) ->
     competition.update(competition_name=new_competition_name)
     return 0
 
-def assess_competition(competition_name: str, competition_code: str) -> int:
+def assess_competition(competition_name: str, competition_code: str):
     """
     Confirm an existing competition.
     Return 1 if the competition doesn't exist, 2 if the competition is already confirmed
@@ -892,7 +890,3 @@ def update_player_conditions(player_name: str, nationality: str, current_team: s
     e_player.club_shirt_number=new_club_shirt_number
     e_player.save()
     return 0
-    
-    
-    
-    
