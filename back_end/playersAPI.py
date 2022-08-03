@@ -31,15 +31,11 @@ async def add_player(player_name: str,nationality: str, current_team: str, club_
     return {"message":"player added succesfully!"}
 
 @router.post("/change")
-async def change_player(username: str, player_name: str, nationality: str, current_team: str, new_player_name: str, new_nationality: str, new_current_team: str):
+async def change_player(player_name: str, nationality: str, current_team: str, new_player_name: str, new_nationality: str, new_current_team: str):
     """
     Change the player values, if player inexistent or already confirmed definetely return error
     """
-    check=False
-    role=svc.verify_role(username)
-    if role!="A" and role!="E":
-        check=True
-    result=svc.change_player(player_name, nationality, current_team, new_player_name, new_nationality, new_current_team, check)
+    result=svc.change_player(player_name, nationality, current_team, new_player_name, new_nationality, new_current_team, True)
     if result==1:
         return responses.JSONResponse(content={"message":"player parameters are incorrect"}, status_code=400)
     if result==2:
@@ -61,6 +57,18 @@ async def assess_player(username: str, player_name: str, nationality: str, curre
     if result==2:
         return responses.JSONResponse(content={"message":"player already confirmed"}, status_code=403)
     return {"message":"player confirmed successfully!"}
+
+@router.post("/modify")
+async def modify_player(username: str, player_name: str, nationality: str, current_team: str, new_player_name: str, new_nationality: str, new_current_team: str):
+    """
+    Modify and confirm definetely the player values, if player inexistent return error
+    """
+    role=svc.verify_role(username)
+    if role!="A" and role!="E":
+        return responses.JSONResponse(content={"message":"Forbidden Operation"},status_code=403)
+    if svc.change_player(player_name, nationality, current_team, new_player_name, new_nationality, new_current_team, False)==1:
+        return responses.JSONResponse(content={"message":"player parameters are incorrect"}, status_code=400)
+    return {"message":"player modified and confirmed successfully!"}
 
 @router.post("/update")
 async def update_player_conditions(player_name: str, nationality: str, current_team: str, new_team: str, new_club_shirt_number: int, new_national_team_shirt_number: int):

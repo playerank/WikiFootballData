@@ -29,7 +29,7 @@ async def sign_up(username: str, password: str):
     """
     Register a new user
     """
-    existing_user=svc.find_user_by_username(username)
+    existing_user=svc.get_user(username)
     if existing_user:
         return responses.JSONResponse(content={"message":f"username {username} already exists"},status_code=400)
     new_user=svc.create_user(username,password)
@@ -59,7 +59,7 @@ async def logout(username: str, token: str=Depends(oauth2_scheme)):
     """
     Log out a User, if username is not online return error
     """
-    user=svc.find_user_by_username(username)
+    user=svc.get_user(username)
     if not user or user.is_online==False:
         return responses.JSONResponse(content={"message":"FATAL ERROR"},status_code=400)
     user.update(is_online=False)

@@ -28,10 +28,12 @@ async def add_competition(competition_name: str):
     return {"message":"competition added succesfully!"}
     
 @router.post("/change")
-async def change_competition(competition_name:str, new_competition_name:str):
+async def change_competition(competition_name: str, new_competition_name: str):
     """
     Change the competition name, if competition inexistent or already confirmed definetely return error
     """
+    if new_competition_name==" ":
+        return responses.JSONResponse(content={"message":"new_competition_name is incorrect"}, status_code=400)
     result=svc.change_competition_name(competition_name,new_competition_name)
     if result==1:
         return responses.JSONResponse(content={"message":"competition_name is incorrect"}, status_code=400)
