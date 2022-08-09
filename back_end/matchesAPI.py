@@ -9,7 +9,7 @@ router = APIRouter(
     tags=["matches"],
 )
 
-@router.get("/completed_matches")
+@router.get("/completed-matches")
 async def get_completed_match_list(n: int):
     """
     Get n completed matches from db.
@@ -20,7 +20,7 @@ async def get_completed_match_list(n: int):
     c_matches=svc.get_completed_matches(n)
     return c_matches
 
-@router.get("/completed_matches/data")
+@router.get("/completed-matches/data")
 async def get_completed_match_data(match_id):
     """
     Get completed match data from db, if the match_id is incorrect return error.
@@ -44,7 +44,7 @@ async def get_match_list(n: int, token: str=Depends(oauth2_scheme)):
     matches=svc.get_matches(n)
     return matches
 
-@router.get("/not_completed")
+@router.get("/not-completed")
 async def get_not_completed_match_list(n: int, token: str=Depends(oauth2_scheme)):
     """
     Get n not completed matches from db, if n==0 then return all not completed matches
@@ -54,7 +54,7 @@ async def get_not_completed_match_list(n: int, token: str=Depends(oauth2_scheme)
     nc_matches=svc.get_not_completed_matches(n)
     return nc_matches
 
-@router.get("/get_id")
+@router.get("/get-id")
 async def get_match_id(home_team: str, away_team: str, season: str, competition_name: str, token: str=Depends(oauth2_scheme)):
     """
     Get the id of the match identified by parameters
@@ -94,6 +94,69 @@ async def add_match(username: str, home_team: str, away_team: str, season: str, 
         return responses.JSONResponse(content={"message":"match already exists"},status_code=400)
     return {"message":"match added successfully!"}
 
+# @router.post("/get-info")
+# async def get_match_info(match_id, token: str=Depends(oauth2_scheme)):
+#     """
+#     To see the info of a match in the db 
+#     """
+#     info=svc.get_match_info(match_id)
+#     if not info:
+#         return responses.JSONResponse(content={"message":"match_id is incorrect"},status_code=400)
+#     return info
+
+@router.post("/add-managers")
+async def add_managers(match_id, home_team_manager: str, away_team_manager: str, token: str=Depends(oauth2_scheme)):
+    """
+    Add or change the managers to the match in the db
+    """
+    result=svc.add_managers(match_id,home_team_manager,away_team_manager)
+    if result==1:
+        return responses.JSONResponse(content={"message":"match_id is incorrect"},status_code=400)
+    if result==2:
+        return responses.JSONResponse(content={"message":"managers already confirmed"},status_code=403)
+    return {"message":"managers added successfully!"}
+
+@router.post("/add-officials")
+async def add_officials(match_id, arbitrator: str, linesman1: str, linesman2: str, fourth_man: str, token: str=Depends(oauth2_scheme)):
+    """
+    Add or change the match_officials to the match in the db
+    """
+    result=svc.add_officials(match_id,arbitrator,linesman1,linesman2,fourth_man)
+    if result==1:
+        return responses.JSONResponse(content={"message":"match_id is incorrect"},status_code=400)
+    if result==2:
+        return responses.JSONResponse(content={"message":"officials already confirmed"},status_code=403)
+    return {"message":"officials added successfully!"}
+
+@router.post("/assess-officials-managers")
+async def assess_officials_and_managers(match_id, username: str, token: str=Depends(oauth2_scheme)):
+    """
+    Confirm definetely the match officials and managers.
+    Only administrators or editors can call this function
+    """
+    role=svc.verify_role(username)
+    if role!="A" and role!="E":
+        return responses.JSONResponse(content={"message":"Forbidden Operation"},status_code=403)
+    result=svc.assess_off_and_man(username, match_id)
+    if result==1:
+        return responses.JSONResponse(content={"message":"match_id is incorrect"},status_code=400)
+    if result==2:
+        return responses.JSONResponse(content={"message":"values already confirmed"},status_code=400)
+    return {"message":"values confirmed successfully!"}
+
+@router.post("/modify-officials-managers")
+async def modify_officials_and_managers(match_id, username: str, home_team_manager: str, away_team_manager: str, arbitrator: str, linesman1: str, linesman2: str, fourth_man: str, token: str=Depends(oauth2_scheme)):
+    """
+    Modify and confirms definetely the officials and managers.
+    Only administrators and editors can call this function
+    """
+    role=svc.verify_role(username)
+    if role!="A" and role!="E":
+        return responses.JSONResponse(content={"message":"Forbidden Operation"},status_code=403)
+    if not svc.modify_off_and_man(match_id, username, home_team_manager, away_team_manager, arbitrator, linesman1, linesman2, fourth_man):
+        return responses.JSONResponse(content={"message":"match_id is incorrect"},status_code=400)
+    return {"message":"values updated and confirmed successfully!"}
+
 @router.get("/get-data")
 async def get_data(match_id, token: str=Depends(oauth2_scheme)):
     """
@@ -104,7 +167,7 @@ async def get_data(match_id, token: str=Depends(oauth2_scheme)):
         return responses.JSONResponse(content={"message":"match_id is incorrect"},status_code=400)
     return data
 
-@router.get("/get_elaborated_data")
+@router.get("/get-elaborated-data")
 async def get_elaborated_data(match_id, n: int, token: str=Depends(oauth2_scheme)):
     """
     Get n elaborated data of the match from db, if n==0 get all elaborated data of the match
@@ -116,7 +179,7 @@ async def get_elaborated_data(match_id, n: int, token: str=Depends(oauth2_scheme
         return responses.JSONResponse(content={"message":"this match doesn't have any elaborated data"},status_code=400)
     return e_data
 
-@router.post("/change-name") #da testare
+@router.post("/change-name")
 async def change_match_name(match_id, home_team: str, away_team: str, season: str, competition_name: str, round: str, date: datetime, link: HttpUrl, extended_time: bool, penalty: bool):
     """
     Change the name of the match, if the match_id is incorrect or match is already confirmed return error
@@ -273,7 +336,7 @@ async def assess_name(username: str, match_id, token: str=Depends(oauth2_scheme)
         return responses.JSONResponse(content={"message":"match_name already confirmed"},status_code=400)
     return {"message":"match_name confirmed successfully!"}
 
-@router.post("/modify-name") #da testare
+@router.post("/modify-name")
 async def modify_name(username: str, match_id, home_team: str, away_team: str, season: str, competition_name: str, round: str, date: datetime, link: HttpUrl, extended_time: bool, penalty: bool):
     """
     Modify and confirm definitely the match name in the db, if the match_name is incorrect return error
