@@ -20,6 +20,13 @@ class Match(mongoengine.Document):
     extended_time: bool=mongoengine.BooleanField(required=True)
     penalty: bool=mongoengine.BooleanField(required=True)
     is_confirmed: bool=mongoengine.BooleanField(default=False)
+    officials: List[str]=mongoengine.ListField()
+    home_team_manager: str=mongoengine.StringField()
+    away_team_manager: str=mongoengine.StringField()
+    officials_and_managers_are_confirmed=mongoengine.BooleanField(default=False)
+    #home_team_formation: List[str]=mongoengine.ListField()
+    #away_team_formation: List[str]=mongoengine.ListField()
+    #formations_are_confirmed: bool=mongoengine.BooleanField(default=False)
     additional_attributes: List=mongoengine.ListField()
     working: List[str]=mongoengine.ListField()
     link: HttpUrl=mongoengine.URLField(required=True)
@@ -121,7 +128,7 @@ class Match(mongoengine.Document):
         Check if all data are completed
         """
         for d in self.data: 
-            if d.author=="":
+            if not d.author:
                 return False
         return True
 
