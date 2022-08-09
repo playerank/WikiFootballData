@@ -227,6 +227,92 @@ def add_match(username: str, home_team: str, away_team: str, season: str, compet
     match.save()
     return 0
 
+# def get_match_info(match_id: ObjectId):
+#     """
+#     Return the info of the match identified by match_id
+#     """
+#     match=get_match(match_id)
+#     if not match:
+#         return None
+#     info=list()
+#     info.append(get_competition_by_id(match.competition_id))
+#     info.append(get_team_by_id(match.home_team_id))
+
+def add_managers(match_id: ObjectId, home_team_manager: str, away_team_manager: str):
+    """
+    Add the managers to the match identified by match_id.
+    Return 1 if the match doesn't exists, 2 if values are already confirmed
+    """
+    match=get_match(match_id)
+    if not match:
+        return 1
+    if match.officials_and_managers_are_confirmed:
+        return 2
+    match.home_team_manager=home_team_manager
+    match.away_team_manager=away_team_manager
+    match.journal.append(f"Managers added or changed to {home_team_manager} and {away_team_manager}")
+    match.save()
+    return 0
+
+def add_officials(match_id: ObjectId, arbitrator: str, linesman1: str, linesman2: str, fourth_man: str):
+    """
+    Add the officials to the match identified by match_id.
+    Return 1 if the match doesn't exists, 2 if values are already confirmed
+    """
+    match=get_match(match_id)
+    if not match:
+        return 1
+    if match.officials_and_managers_are_confirmed:
+        return 2
+    match.officials=list()
+    match.officials.append(arbitrator)
+    match.officials.append(linesman1)
+    match.officials.append(linesman2)
+    match.officials.append(fourth_man)
+    match.journal.append(f"Officials added or changed to {arbitrator}, {linesman1}, {linesman2} and {fourth_man}")
+    match.save()
+    return 0
+
+def assess_off_and_man(match_id: ObjectId, username: str):
+    """
+    Confirm definetely values of the match identified by match_id.
+    Return 1 if the match doesn't exists, 2 if values are already confirmed
+    """
+    match=get_match(match_id)
+    if not match:
+        return 1
+    if match.officials_and_managers_are_confirmed:
+        return 2
+    match.officials_and_managers_are_confirmed=True
+    match.journal.append(f"Officials and Managers are being confirmed by {username}")
+    match.save()
+    return 0
+
+def modify_off_and_man(match_id: ObjectId, username: str, home_team_manager: str, away_team_manager: str, arbitrator: str, linesman1: str, linesman2: str, fourth_man: str):
+    """
+    Modify and confirm definetely the officials and managers of the match identified by match_id.
+    Return True if operation is successful, False otherwise
+    """
+    match=get_match(match_id)
+    if not match:
+        return False
+    if home_team_manager!=" ":
+        match.home_team_manager=home_team_manager
+    if away_team_manager!=" ":
+        match.away_team_manager=away_team_manager
+    if arbitrator!=" ":
+        match.officials[0]=arbitrator
+    if linesman1!=" ":
+        match.officials[1]=linesman1
+    if linesman2!=" ":
+        match.officials[2]=linesman2
+    if fourth_man!=" ":
+        match.officials[3]=fourth_man
+    match.officials_and_managers_are_confirmed=True
+    match.journal.append(f"Officials and managers are being modified and confirmed by {username}")
+    match.save()
+    return True
+
 def get_data(match_id: ObjectId) -> List[Analysis] | None:
     """
     Return the list of data of the match identified by match_id
@@ -646,6 +732,13 @@ def get_competition(competition_name: str) -> Competition:
     Return the competition identified by competition_name
     """
     competition: Competition=Competition.objects(competition_name=competition_name).first()
+    return competition
+
+def get_competition_by_id(id: ObjectId) -> Competition:
+    """
+    Return the competition identified by id
+    """
+    competition: Competition=Competition.objects(id=id).first()
     return competition
 
 def get_competitions(n: int) -> List[Competition]:
