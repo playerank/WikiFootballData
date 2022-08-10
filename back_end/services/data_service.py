@@ -5,7 +5,8 @@ from pydantic import HttpUrl
 from data.users import User
 from data.matches import Match, Analysis
 from data.events import Event
-from data.requested_matches import Requested_match
+#from data.requested_matches import Requested_match
+from services.requested_match_service import get_requested_matches,add_r_match #COSI' FUNZIONA
 from data.competitions import Competition
 from data.teams import Team
 from data.rules import n
@@ -680,41 +681,41 @@ def modify_report(username: str, match_id: ObjectId, report: HttpUrl) -> bool:
 
 #REQUESTED_MATCHES_API
 
-def get_requested_matches(n: int) -> List[Requested_match]:
-    """
-    Return the list of n requested matches
-    """
-    if n==0:
-        r_matches:List[Requested_match]=list(Requested_match.objects().all())
-    else:
-        r_matches:List[Requested_match]=list(Requested_match.objects[:n])
-    #debug
-    # for r in r_matches:
-    #     print("r_match {} - {}, {} {}".format(r.home_team,r.away_team,r.competition_name,r.season_name))
-    return r_matches
+# def get_requested_matches(n: int) -> List[Requested_match]:
+#     """
+#     Return the list of n requested matches
+#     """
+#     if n==0:
+#         r_matches:List[Requested_match]=list(Requested_match.objects().all())
+#     else:
+#         r_matches:List[Requested_match]=list(Requested_match.objects[:n])
+#     #debug
+#     # for r in r_matches:
+#     #     print("r_match {} - {}, {} {}".format(r.home_team,r.away_team,r.competition_name,r.season_name))
+#     return r_matches
 
-def add_r_match(home_team: str,away_team: str,competition_name: str,season: str) -> bool:
-    """
-    Create and add to the db a requested_match.
-    Return False if already exists a requested_match with the same value
-    """
-    existing_r_match: Requested_match=Requested_match.objects() \
-        .filter(home_team=home_team) \
-        .filter(away_team=away_team) \
-        .filter(competition_name=competition_name) \
-        .filter(season_name=season) \
-        .first()
-    if existing_r_match:
-        #debug
-        # print("Match esistente {} - {}, {} {}".format(existing_r_match.home_team,existing_r_match.away_team,existing_r_match.competition_name,existing_r_match.season_name))
-        return False
-    r_match=Requested_match()
-    r_match.home_team=home_team
-    r_match.away_team=away_team
-    r_match.competition_name=competition_name
-    r_match.season_name=season
-    r_match.save()
-    return True
+# def add_r_match(home_team: str,away_team: str,competition_name: str,season: str) -> bool:
+#     """
+#     Create and add to the db a requested_match.
+#     Return False if already exists a requested_match with the same value
+#     """
+#     existing_r_match: Requested_match=Requested_match.objects() \
+#         .filter(home_team=home_team) \
+#         .filter(away_team=away_team) \
+#         .filter(competition_name=competition_name) \
+#         .filter(season_name=season) \
+#         .first()
+#     if existing_r_match:
+#         #debug
+#         # print("Match esistente {} - {}, {} {}".format(existing_r_match.home_team,existing_r_match.away_team,existing_r_match.competition_name,existing_r_match.season_name))
+#         return False
+#     r_match=Requested_match()
+#     r_match.home_team=home_team
+#     r_match.away_team=away_team
+#     r_match.competition_name=competition_name
+#     r_match.season_name=season
+#     r_match.save()
+#     return True
 
 #COMPETITIONS_API
 
@@ -726,6 +727,13 @@ def get_competition_id(competition_name: str) -> ObjectId | None:
     if not competition:
         return None
     return competition.id
+
+def get_competition_by_id(id: ObjectId):
+    """
+    Return the Competition identified by id
+    """
+    competition: Team=Team.objects(id=id).first()
+    return competition
 
 def get_competition(competition_name: str) -> Competition:
     """
@@ -822,6 +830,13 @@ def get_team_id(team_name: str) -> ObjectId | None:
         return None
     return team.id
 
+def get_team_by_id(id: ObjectId):
+    """
+    Return the Team identified by id
+    """
+    team: Team=Team.objects(id=id).first()
+    return team
+
 def get_team(team_name: str) -> Team:
     """
     Return the team identified by team_name
@@ -893,6 +908,22 @@ def modify_team(team_name: str, new_team_name: str) -> bool:
     return True
 
 #PLAYERS_API
+
+def get_player_id(player_name: str) -> ObjectId | None:
+    """
+    Return the id of the player identified by player_name
+    """
+    player: Player=Player.objects(player_name=player_name).first()
+    if not player:
+        return None
+    return player.id
+
+def get_player_by_id(id: ObjectId):
+    """
+    Return the player identified by id
+    """
+    player: Player=Player.objects(id=id).first()
+    return player
 
 def get_player(player_name: str, nationality: str, current_team: str) -> Player:
     """
