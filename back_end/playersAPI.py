@@ -1,5 +1,6 @@
 from fastapi import APIRouter, responses, Depends
 from usersAPI import oauth2_scheme
+from datetime import datetime
 import services.data_service as svc
 
 router = APIRouter(
@@ -19,39 +20,71 @@ async def get_player_list(n: int):
     return players
 
 @router.post("/add")
-async def add_player(player_name: str,nationality: str, current_team: str, club_shirt_number: int, national_team_shirt_number: int):
+async def add_player(player_name: str, date_of_birth_str: str, nationality: str, current_team: str, club_shirt_number: int, national_team_shirt_number: int):
     """
     Add player to the collection, if player already exists return error
     """
-    result=svc.add_player(player_name, nationality, current_team, club_shirt_number, national_team_shirt_number)
+    try:
+        date_of_birth=datetime.strptime(date_of_birth_str, '%d/%m/%Y')
+    except ValueError:
+        try:
+            date_of_birth=datetime.strptime(date_of_birth_str, '%d/%m/%y')
+        except:
+            return responses.JSONResponse(content={"message":f"date {date_of_birth_str} is in a wrong format"},status_code=400)
+    
+    result=svc.add_player(player_name, date_of_birth, nationality, current_team, club_shirt_number, national_team_shirt_number)
     if result==1:
         return responses.JSONResponse(content={"message":f"club_shirt_number {club_shirt_number} is invalid"}, status_code=400)
     if result==2:
+        return responses.JSONResponse(content={"message":f"current_team {current_team} is incorrect or has not yet been saved in db"}, status_code=400)
+    if result==3:
+        return responses.JSONResponse(content={"message":f"nationality {nationality} is incorrect or has not yet been saved in db"}, status_code=400)
+    if result==4:
         return responses.JSONResponse(content={"message":f"player {player_name} already exists"}, status_code=400)
     return {"message":"player added succesfully!"}
 
 @router.post("/change")
-async def change_player(player_name: str, nationality: str, current_team: str, new_player_name: str, new_nationality: str, new_current_team: str):
+async def change_player(player_name: str, date_of_birth_str: str, new_player_name: str, new_nationality: str, new_current_team: str):
     """
     Change the player values, if player inexistent or already confirmed definetely return error
     """
-    result=svc.change_player(player_name, nationality, current_team, new_player_name, new_nationality, new_current_team, True)
+    try:
+        date_of_birth=datetime.strptime(date_of_birth_str, '%d/%m/%Y')
+    except ValueError:
+        try:
+            date_of_birth=datetime.strptime(date_of_birth_str, '%d/%m/%y')
+        except:
+            return responses.JSONResponse(content={"message":f"date {date_of_birth_str} is in a wrong format"},status_code=400)
+
+    result=svc.change_player(player_name, date_of_birth, new_player_name, new_nationality, new_current_team, True)
     if result==1:
         return responses.JSONResponse(content={"message":"player parameters are incorrect"}, status_code=400)
     if result==2:
         return responses.JSONResponse(content={"message":"player already confirmed"}, status_code=403)
+    if result==3:
+        return responses.JSONResponse(content={"message":f"current_team {new_current_team} is incorrect or has not yet been saved in db"}, status_code=400)
+    if result==4:
+        return responses.JSONResponse(content={"message":f"nationality {new_nationality} is incorrect or has not yet been saved in db"}, status_code=400)
     return {"message":"player changed successfully!"}
 
 @router.post("/assess")
-async def assess_player(username: str, player_name: str, nationality: str, current_team: str):
+async def assess_player(username: str, player_name: str, date_of_birth_str: str):
     """
     Confirm definetely the player parameter, if player inexistent or already confirmed definetely return error
     Only administrators or editors can call this function
     """
+    try:
+        date_of_birth=datetime.strptime(date_of_birth_str, '%d/%m/%Y')
+    except ValueError:
+        try:
+            date_of_birth=datetime.strptime(date_of_birth_str, '%d/%m/%y')
+        except:
+            return responses.JSONResponse(content={"message":f"date {date_of_birth_str} is in a wrong format"},status_code=400)
+
     role=svc.verify_role(username)
     if role!="A" and role!="E":
         return responses.JSONResponse(content={"message":"Forbidden Operation"},status_code=403)
-    result=svc.assess_player(player_name, nationality, current_team)
+    result=svc.assess_player(player_name, date_of_birth)
     if result==1:
        return responses.JSONResponse(content={"message":"player parameters are incorrect"}, status_code=400) 
     if result==2:
@@ -59,26 +92,50 @@ async def assess_player(username: str, player_name: str, nationality: str, curre
     return {"message":"player confirmed successfully!"}
 
 @router.post("/modify")
-async def modify_player(username: str, player_name: str, nationality: str, current_team: str, new_player_name: str, new_nationality: str, new_current_team: str):
+async def modify_player(username: str, player_name: str, date_of_birth_str: str, new_player_name: str, new_nationality: str, new_current_team: str):
     """
-    Modify and confirm definetely the player values, if player inexistent return error
+    Modify and confirm definetely the player values, if player inexistent return error.
+    Only administrators or editors can call this function
     """
+    try:
+        date_of_birth=datetime.strptime(date_of_birth_str, '%d/%m/%Y')
+    except ValueError:
+        try:
+            date_of_birth=datetime.strptime(date_of_birth_str, '%d/%m/%y')
+        except:
+            return responses.JSONResponse(content={"message":f"date {date_of_birth_str} is in a wrong format"},status_code=400)
+
     role=svc.verify_role(username)
     if role!="A" and role!="E":
         return responses.JSONResponse(content={"message":"Forbidden Operation"},status_code=403)
-    if svc.change_player(player_name, nationality, current_team, new_player_name, new_nationality, new_current_team, False)==1:
+    result=svc.change_player(player_name, date_of_birth, new_player_name, new_nationality, new_current_team, False)
+    if result==1:
         return responses.JSONResponse(content={"message":"player parameters are incorrect"}, status_code=400)
+    if result==3:
+        return responses.JSONResponse(content={"message":f"current_team {new_current_team} is incorrect or has not yet been saved in db"}, status_code=400)
+    if result==4:
+        return responses.JSONResponse(content={"message":f"nationality {new_nationality} is incorrect or has not yet been saved in db"}, status_code=400)
     return {"message":"player modified and confirmed successfully!"}
 
 @router.post("/update")
-async def update_player_conditions(player_name: str, nationality: str, current_team: str, new_team: str, new_club_shirt_number: int, new_national_team_shirt_number: int):
+async def update_player_conditions(player_name: str, date_of_birth_str: str, new_team: str, new_club_shirt_number: int, new_national_team_shirt_number: int):
     """
     Update the current player conditions that are the team, the club shirt number and the national team shirt number.
     if the player doesn't exist or the club shirt number is an invalid value return error
     """
-    result=svc.update_player_conditions(player_name, nationality, current_team, new_team, new_club_shirt_number, new_national_team_shirt_number)
+    try:
+        date_of_birth=datetime.strptime(date_of_birth_str, '%d/%m/%Y')
+    except ValueError:
+        try:
+            date_of_birth=datetime.strptime(date_of_birth_str, '%d/%m/%y')
+        except:
+            return responses.JSONResponse(content={"message":f"date {date_of_birth_str} is in a wrong format"},status_code=400)
+
+    result=svc.update_player_conditions(player_name, date_of_birth, new_team, new_club_shirt_number, new_national_team_shirt_number)
     if result==1:
         return responses.JSONResponse(content={"message":f"Invalid shirt number {new_club_shirt_number}"},status_code=400)
     if result==2:
         return responses.JSONResponse(content={"message":"player parameters are incorrect"}, status_code=400)
+    if result==3:
+        return responses.JSONResponse(content={"message":f"current_team {new_team} is incorrect or has not yet been saved in db"}, status_code=400)
     return {"message":"player conditions updated succesfully!"}
