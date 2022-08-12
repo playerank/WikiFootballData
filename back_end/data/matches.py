@@ -1,9 +1,10 @@
 import mongoengine
 from pydantic import HttpUrl
-from data.analysis import Analysis,init
 from typing import List
 from bson import ObjectId
 from datetime import datetime
+from data.analysis import Analysis,init
+from data.match_players import Match_Player
 
 class Match(mongoengine.Document):
     """
@@ -24,8 +25,8 @@ class Match(mongoengine.Document):
     home_team_manager: str=mongoengine.StringField()
     away_team_manager: str=mongoengine.StringField()
     officials_and_managers_are_confirmed=mongoengine.BooleanField(default=False)
-    #home_team_formation: List[str]=mongoengine.ListField()
-    #away_team_formation: List[str]=mongoengine.ListField()
+    #home_team_formation: List[Match_Player]=mongoengine.EmbeddedDocumentListField() #lista di una nuova struttura che ha id e numero di maglia(anche nome?)
+    #away_team_formation: List[Match_Player]=mongoengine.EmbeddedDocumentListField()
     #formations_are_confirmed: bool=mongoengine.BooleanField(default=False)
     additional_attributes: List=mongoengine.ListField()
     working: List[str]=mongoengine.ListField()
