@@ -2,7 +2,7 @@ from data.players import Player
 from datetime import datetime
 from bson import ObjectId
 from typing import List
-from services.data_service import get_team_id
+from services.team_service import get_team_id
 
 def get_player_id(player_name: str) -> ObjectId | None:
     """

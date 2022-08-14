@@ -5,14 +5,11 @@ from pydantic import HttpUrl
 from data.users import User
 from data.matches import Match, Analysis
 from data.events import Event
-#from data.requested_matches import Requested_match
-from services.requested_match_service import get_requested_matches,add_r_match #COSI' FUNZIONA
 from data.competitions import Competition
-from data.teams import Team
+from services.team_service import get_team_id
 from data.rules import n
 from data.reviews import Review
-#from data.players import Player
-from services.player_service import get_players,add_player,change_player,assess_player,update_player_conditions
+from services.player_service import get_player_id
 from passlib.context import CryptContext
 
 pwd_context= CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -187,7 +184,8 @@ def get_completed_matches(n: int) -> List[Match]:
 
 def get_completed_match_data(match_id: ObjectId) -> List | int:
     """
-    Return the list of data of the match identified by match_id, 1 if match_id incorrect, 2 if match is not completed
+    Return the list of data of the match identified by match_id.
+    1 if the match doesn't exist, 2 if match is not completed
     """
     c_match: Match=Match.objects(id=match_id).only('is_completed','data').first()
     if not c_match:
@@ -243,7 +241,7 @@ def add_match(username: str, home_team: str, away_team: str, season: str, compet
 def add_managers(match_id: ObjectId, home_team_manager: str, away_team_manager: str):
     """
     Add the managers to the match identified by match_id.
-    Return 1 if the match doesn't exists, 2 if values are already confirmed
+    Return 1 if the match doesn't exist, 2 if values are already confirmed
     """
     match=get_match(match_id)
     if not match:
@@ -258,8 +256,8 @@ def add_managers(match_id: ObjectId, home_team_manager: str, away_team_manager: 
 
 def add_officials(match_id: ObjectId, arbitrator: str, linesman1: str, linesman2: str, fourth_man: str):
     """
-    Add the officials to the match identified by match_id.
-    Return 1 if the match doesn't exists, 2 if values are already confirmed
+    Add or change the officials to the match identified by match_id.
+    Return 1 if the match doesn't exist, 2 if values are already confirmed
     """
     match=get_match(match_id)
     if not match:
@@ -278,7 +276,7 @@ def add_officials(match_id: ObjectId, arbitrator: str, linesman1: str, linesman2
 def assess_off_and_man(match_id: ObjectId, username: str):
     """
     Confirm definetely values of the match identified by match_id.
-    Return 1 if the match doesn't exists, 2 if values are already confirmed
+    Return 1 if the match doesn't exist, 2 if values are already confirmed
     """
     match=get_match(match_id)
     if not match:
@@ -286,11 +284,11 @@ def assess_off_and_man(match_id: ObjectId, username: str):
     if match.officials_and_managers_are_confirmed:
         return 2
     match.officials_and_managers_are_confirmed=True
-    match.journal.append(f"Officials and Managers are being confirmed by {username}")
+    match.journal.append(f"Officials and Managers confirmed by {username}")
     match.save()
     return 0
 
-def modify_off_and_man(match_id: ObjectId, username: str, home_team_manager: str, away_team_manager: str, arbitrator: str, linesman1: str, linesman2: str, fourth_man: str):
+def modify_off_and_man(match_id: ObjectId, username: str, home_team_manager: str, away_team_manager: str, arbitrator: str, linesman1: str, linesman2: str, fourth_man: str) -> bool:
     """
     Modify and confirm definetely the officials and managers of the match identified by match_id.
     Return True if operation is successful, False otherwise
@@ -311,9 +309,58 @@ def modify_off_and_man(match_id: ObjectId, username: str, home_team_manager: str
     if fourth_man!=" ":
         match.officials[3]=fourth_man
     match.officials_and_managers_are_confirmed=True
-    match.journal.append(f"Officials and managers are being modified and confirmed by {username}")
+    match.journal.append(f"Officials and managers updated and confirmed by {username}")
     match.save()
     return True
+
+def add_team_formation(match_id, team: int, player_names: List[str], player_numbers: List[int]):
+    """
+    Add or change the home formation to the match identified by match_id.
+    Return 1 if the match doesn't exist, 2 if formations are confirmed, player_name if player_name is incorrect
+    """
+    match=get_match(match_id)
+    if not match:
+        return 1
+    if match.formations_are_confirmed:
+        return 2
+    i=0
+    for p in player_names:
+        player_id=get_player_id(p)
+        if not player_id:
+            return p
+        match.team_append(team,player_id,p,player_numbers[i])
+        i+=1
+    
+    if team==0:
+        match.journal.append("Home team formation added or changed")
+    else:
+        match.journal.append("Away team formation added or changed")
+    match.save()
+    return 0
+
+def assess_formations(match_id: ObjectId, username: str):
+    """
+    Confirm definetely the formations of the match identified by match_id.
+    Return 1 if the match doesn't exist, 2 if formations are already confirmed
+    """
+    match=get_match(match_id)
+    if not match:
+        return 1
+    if match.formations_are_confirmed:
+        return 2
+    match.formations_are_confirmed=True
+    match.journal.append(f"Formations confirmed by {username}")
+    match.save()
+    return 0
+
+def modify_formations(match_id: ObjectId, username: str, player_names: List[str], player_numbers: List[str]):
+    """
+    Modify and confirm definetely the formations of the match identified by match_id.
+    Return 1 if the match doesn't exist
+    """
+    match=get_match(match_id)
+    if not match:
+        return 1
 
 def get_data(match_id: ObjectId) -> List[Analysis] | None:
     """
@@ -680,44 +727,6 @@ def modify_report(username: str, match_id: ObjectId, report: HttpUrl) -> bool:
     match.save()
     return True
 
-#REQUESTED_MATCHES_API
-
-# def get_requested_matches(n: int) -> List[Requested_match]:
-#     """
-#     Return the list of n requested matches
-#     """
-#     if n==0:
-#         r_matches:List[Requested_match]=list(Requested_match.objects().all())
-#     else:
-#         r_matches:List[Requested_match]=list(Requested_match.objects[:n])
-#     #debug
-#     # for r in r_matches:
-#     #     print("r_match {} - {}, {} {}".format(r.home_team,r.away_team,r.competition_name,r.season_name))
-#     return r_matches
-
-# def add_r_match(home_team: str,away_team: str,competition_name: str,season: str) -> bool:
-#     """
-#     Create and add to the db a requested_match.
-#     Return False if already exists a requested_match with the same value
-#     """
-#     existing_r_match: Requested_match=Requested_match.objects() \
-#         .filter(home_team=home_team) \
-#         .filter(away_team=away_team) \
-#         .filter(competition_name=competition_name) \
-#         .filter(season_name=season) \
-#         .first()
-#     if existing_r_match:
-#         #debug
-#         # print("Match esistente {} - {}, {} {}".format(existing_r_match.home_team,existing_r_match.away_team,existing_r_match.competition_name,existing_r_match.season_name))
-#         return False
-#     r_match=Requested_match()
-#     r_match.home_team=home_team
-#     r_match.away_team=away_team
-#     r_match.competition_name=competition_name
-#     r_match.season_name=season
-#     r_match.save()
-#     return True
-
 #COMPETITIONS_API
 
 def get_competition_id(competition_name: str) -> ObjectId | None:
@@ -733,7 +742,7 @@ def get_competition_by_id(id: ObjectId):
     """
     Return the Competition identified by id
     """
-    competition: Team=Team.objects(id=id).first()
+    competition: Competition=Competition.objects(id=id).first()
     return competition
 
 def get_competition(competition_name: str) -> Competition:
@@ -818,92 +827,4 @@ def modify_competition(competition_name: str, new_competition_name: str, new_com
         competition.update(competition_name=new_competition_name)
     else:
         competition.update(competition_name=new_competition_name, competition_code=new_competition_code)
-    return True
-
-#TEAMS_API
-
-def get_team_id(team_name: str) -> ObjectId | None:
-    """
-    Return the id of the team identified by team_name
-    """
-    team: Team=Team.objects(team_name=team_name).only('id').first()
-    if not team:
-        return None
-    return team.id
-
-def get_team_by_id(id: ObjectId):
-    """
-    Return the Team identified by id
-    """
-    team: Team=Team.objects(id=id).first()
-    return team
-
-def get_team(team_name: str) -> Team:
-    """
-    Return the team identified by team_name
-    """
-    team: Team=Team.objects(team_name=team_name).first()
-    return team
-
-def get_teams(n: int) -> List[Team]:
-    """
-    Return the list of n teams from the db
-    """
-    if n==0:
-        teams:List[Team]=list(Team.objects().all())
-    else:
-        teams:List[Team]=list(Team.objects[:n])
-    #debug
-    # for t in teams:
-    #     print("Squadra {}, confermata? {}".format(t.team_name,t.is_confirmed))
-    return teams
-
-def add_team(team_name: str) -> bool:
-    """
-    Create a team and add it to the db.
-    Return True if operation is successful, False otherwise
-    """
-    e_team=get_team(team_name)
-    if e_team:
-        return False
-    team=Team()
-    team.team_name=team_name
-    team.save()
-    return True
-
-def change_team_name(team_name: str, new_team_name: str) -> int:
-    """
-    Change the name of an existing team.
-    Return 1 if the team doesn't exist, 2 if the team is already confirmed
-    """
-    team=get_team(team_name)
-    if not team:
-        return 1
-    if team.is_confirmed:
-        return 2
-    team.update(team_name=new_team_name)
-    return 0
-
-def assess_team(team_name: str) -> int:
-    """
-    Confirm an existing team.
-    Return 1 if the team doesn't exist, 2 if the team is already confirmed
-    """
-    team=get_team(team_name)
-    if not team:
-        return 1
-    if team.is_confirmed:
-        return 2
-    team.update(is_confirmed=True)
-    return 0
-
-def modify_team(team_name: str, new_team_name: str) -> bool:
-    """
-    Modify the name of an existing team.
-    Return True if operation is successful, False otherwise
-    """
-    team=get_team(team_name)
-    if not team:
-        return False
-    team.update(team_name=new_team_name, is_confirmed=True)
     return True
