@@ -1,6 +1,6 @@
 from fastapi import APIRouter, responses
-import services.data_service as svc #COSI' FUNZIONA
-# import services.requested_match_service as svc
+#import services.data_service as svc #COSI' FUNZIONA
+import services.requested_match_service as svc
 
 router = APIRouter(
     prefix="/requested_matches",

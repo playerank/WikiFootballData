@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import List
 from fastapi import APIRouter, Depends, responses 
 from pydantic import HttpUrl, Json
 from usersAPI import oauth2_scheme
@@ -94,7 +95,7 @@ async def add_match(username: str, home_team: str, away_team: str, season: str, 
         return responses.JSONResponse(content={"message":"match already exists"},status_code=400)
     return {"message":"match added successfully!"}
 
-# @router.post("/get-info")
+# @router.post("/get-info") #DA FARE
 # async def get_match_info(match_id, token: str=Depends(oauth2_scheme)):
 #     """
 #     To see the info of a match in the db 
@@ -147,7 +148,7 @@ async def assess_officials_and_managers(match_id, username: str, token: str=Depe
 @router.post("/modify-officials-managers")
 async def modify_officials_and_managers(match_id, username: str, home_team_manager: str, away_team_manager: str, arbitrator: str, linesman1: str, linesman2: str, fourth_man: str, token: str=Depends(oauth2_scheme)):
     """
-    Modify and confirms definetely the officials and managers.
+    Modify and confirm definetely the officials and managers.
     Only administrators and editors can call this function
     """
     role=svc.verify_role(username)
@@ -156,6 +157,101 @@ async def modify_officials_and_managers(match_id, username: str, home_team_manag
     if not svc.modify_off_and_man(match_id, username, home_team_manager, away_team_manager, arbitrator, linesman1, linesman2, fourth_man):
         return responses.JSONResponse(content={"message":"match_id is incorrect"},status_code=400)
     return {"message":"values updated and confirmed successfully!"}
+
+@router.post("/add-home-team-formation")
+async def add_home_formation(match_id, player_names: List[str], player_numbers: List[int], token: str=Depends(oauth2_scheme)):
+    """
+    Add to the match the formation of the home team, the order must be lineup then bench and the lineup must be in order gk->d->m->s from left to right.
+    If the match_id is incorrect return error
+    """
+    l1=len(player_names)
+    if l1!=22:
+        return responses.JSONResponse(content={"message":"Incorrect number of values, you must insert 22 players"},status_code=400)
+    l2=len(player_numbers)
+    if l1!=l2:
+        return responses.JSONResponse(content={"message":f"Incorrect number of values, there are {l1} player_names but {l2} player_numbers"},status_code=400)
+    for pn in player_numbers:
+        if pn<0:
+            return responses.JSONResponse(content={"message":"Invalid shirt number value"},status_code=400)
+    result=svc.add_team_formation(match_id, 0, player_names, player_numbers)
+    if result==1:
+        return responses.JSONResponse(content={"message":"match_id is incorrect"},status_code=400)
+    if result==2:
+        return responses.JSONResponse(content={"message":"match formations already confirmed"},status_code=403)
+    if result!=0:
+        return responses.JSONResponse(content={"message":f"player_name {result} is incorrect or has not yet been saved in db"},status_code=400)
+    return {"message":"home formation addedd successfully!"}
+
+@router.post("/add-away-team-formation")
+async def add_away_formation(match_id, player_names: List[str], player_numbers: List[int], token: str=Depends(oauth2_scheme)):
+    """
+    Add to the match the formation of the away team, the order must be lineup then bench and the lineup must be in order gk->d->m->s from left to right.
+    If the match_id is incorrect return error
+    """
+    l1=len(player_names)
+    if l1!=22:
+        return responses.JSONResponse(content={"message":"Incorrect number of values, you must insert 22 players"},status_code=400)
+    l2=len(player_numbers)
+    if l1!=l2:
+        return responses.JSONResponse(content={"message":f"Incorrect number of values, there are {l1} player_names but {l2} player_numbers"},status_code=400)
+    for pn in player_numbers:
+        if pn<0:
+            return responses.JSONResponse(content={"message":"Invalid shirt number value"},status_code=400)
+    result=svc.add_team_formation(match_id, 1, player_names, player_numbers)
+    if result==1:
+        return responses.JSONResponse(content={"message":"match_id is incorrect"},status_code=400)
+    if result==2:
+        return responses.JSONResponse(content={"message":"match formations already confirmed"},status_code=403)
+    if result!=0:
+        return responses.JSONResponse(content={"message":f"player_name {result} is incorrect or has not yet been saved in db"},status_code=400)
+    return {"message":"away formation addedd successfully!"}
+
+@router.post("/assess-formations")
+async def assess_formations(match_id, username: str, token: str=Depends(oauth2_scheme)):
+    """
+    Confirm definetely the match fromations.
+    Only administrators or editors can call this function
+    """
+    role=svc.verify_role(username)
+    if role!="A" and role!="E":
+        return responses.JSONResponse(content={"message":"Forbidden Operation"},status_code=403)
+    result=svc.assess_formations(match_id, username)
+    if result==1:
+        return responses.JSONResponse(content={"message":"match_id is incorrect"},status_code=400)
+    if result==2:
+        return responses.JSONResponse(content={"message":"formations already confirmed"},status_code=400)
+    return {"message":"fromations confirmed successfully!"}
+
+@router.post("/Modify-team-formations")
+async def modify_formations(match_id, username: str, home_team_players: List[str], home_team_numbers: List[int], away_team_players: List[str], away_team_numbers: List[int], token: str=Depends(oauth2_scheme)):
+    """
+    Modify and confirm definetely the formations.
+    Only administrators and editors can call this function
+    """
+    role=svc.verify_role(username)
+    if role!="A" and role!="E":
+        return responses.JSONResponse(content={"message":"Forbidden Operation"},status_code=403)
+    l1=len(home_team_players)
+    if l1!=22:
+        return responses.JSONResponse(content={"message":"Incorrect number of values, you must insert 22 home_team_players"},status_code=400)
+    l2=len(home_team_numbers)
+    if l1!=l2:
+        return responses.JSONResponse(content={"message":f"Incorrect number of values, there are {l1} home_team_players but {l2} home_team_numbers"},status_code=400)
+    l3=len(away_team_players)
+    if l3!=22:
+        return responses.JSONResponse(content={"message":"Incorrect number of values, you must insert 22 away_team_players"},status_code=400)
+    l4=len(away_team_numbers)
+    if l3!=l4:
+        return responses.JSONResponse(content={"message":f"Incorrect number of values, there are {l3} away_team_players but {l4} away_team_numbers"},status_code=400)
+    #now I know that there are 22 home players/numbers and 22 away players/numbers
+    home_team_players.extend(away_team_players)
+    home_team_numbers.extend(away_team_numbers)
+    for pn in home_team_numbers:
+        if pn<0:
+            return responses.JSONResponse(content={"message":"Invalid shirt number value"},status_code=400)
+    result=svc.modify_formations(match_id, username, home_team_players, home_team_numbers)
+    if result==1:
+        return responses.JSONResponse(content={"message":"match_id is incorrect"},status_code=400)
 
 @router.get("/get-data")
 async def get_data(match_id, token: str=Depends(oauth2_scheme)):

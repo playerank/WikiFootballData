@@ -1,8 +1,8 @@
 from fastapi import APIRouter, responses, Depends
 from usersAPI import oauth2_scheme
 from datetime import datetime
-import services.data_service as svc
-#import services.player_service as svc
+#import services.data_service as svc
+import services.player_service as svc
 
 router = APIRouter(
     prefix="/players",
