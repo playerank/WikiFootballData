@@ -4,7 +4,7 @@ from typing import List
 from bson import ObjectId
 from datetime import datetime
 from data.analysis import Analysis,init
-from data.match_players import Match_Player
+from data.match_players import Match_Player,create_player_info
 
 class Match(mongoengine.Document):
     """
@@ -25,9 +25,9 @@ class Match(mongoengine.Document):
     home_team_manager: str=mongoengine.StringField()
     away_team_manager: str=mongoengine.StringField()
     officials_and_managers_are_confirmed=mongoengine.BooleanField(default=False)
-    #home_team_formation: List[Match_Player]=mongoengine.EmbeddedDocumentListField() #lista di una nuova struttura che ha id e numero di maglia(anche nome?)
-    #away_team_formation: List[Match_Player]=mongoengine.EmbeddedDocumentListField()
-    #formations_are_confirmed: bool=mongoengine.BooleanField(default=False)
+    home_team_formation: List[Match_Player]=mongoengine.EmbeddedDocumentListField(Match_Player)
+    away_team_formation: List[Match_Player]=mongoengine.EmbeddedDocumentListField(Match_Player)
+    formations_are_confirmed: bool=mongoengine.BooleanField(default=False)
     additional_attributes: List=mongoengine.ListField()
     working: List[str]=mongoengine.ListField()
     link: HttpUrl=mongoengine.URLField(required=True)
@@ -83,15 +83,15 @@ class Match(mongoengine.Document):
     @property
     def change_data(self):
         l=len(self.data)
-        #ELIMINO
-        if l==29: #termina con penalty
+        #DELETE
+        if l==29: #ends with penalty
             if not self.penalty:
-                self.data.pop() #ora termina con e_t_4
+                self.data.pop() #now ends with e_t_4
             if not self.extended_time:
                 for x in range(8):
-                    self.data.pop() #ora termina con e_t_2
-        #ELIMINO E FORSE AGGIUNGO
-        elif l==28: #termina con e_t_4
+                    self.data.pop() #now ends with e_t_2
+        #DELETE AND MAYBE ADD
+        elif l==28: #ends with e_t_4
             if not self.extended_time:
                 for x in range(8):
                     self.data.pop()
@@ -99,7 +99,7 @@ class Match(mongoengine.Document):
                 self.data.append("penalty")
         elif l==21: #pochissime le partite terminate ai rigori senza supplementari però esistono Community Shield, replay di partite di carabao cup etc
             if not self.penalty:
-                self.data.pop() #ora termina con e_t_2
+                self.data.pop() #now ends with e_t_2
             if self.extended_time:
                 self.data.append(init("91-95"))
                 self.data.append(init("96-100"))
@@ -109,7 +109,7 @@ class Match(mongoengine.Document):
                 self.data.append(init("111-115"))
                 self.data.append(init("116-120"))
                 self.data.append(init("e_t_4"))
-        #AGGIUNGO
+        #ADD
         elif l==20:
             if self.extended_time:
                 self.data.append(init("91-95"))
@@ -132,7 +132,110 @@ class Match(mongoengine.Document):
             if not d.author:
                 return False
         return True
+    
+    @property
+    def team_append(self, team: int, player_id: ObjectId, player_name: str, shirt_number: int):
+        """
+        Append to the indicated formation the Match_Player object with the right parameters
+        """
+        p=Match_Player()
+        p.player_id=player_id
+        p.player_name=player_name
+        p.shirt_number=shirt_number
+        if team==0:
+            self.home_team_formation.append(p)
+        else:
+            self.away_team_formation.append(p)
 
 #time_slot vanno da 1-5 a rigori
 #1-5, 6-10, 11-15, 16-20, 21-25, 26-30, 31-35, 36-40, 41-45, recupero1, 46-50 -> 86-90, recupero2, 91-95 -> 101-105, recupero3, 106-110 -> 116-120, recupero4, rigori
 #sono 29
+
+def create_info_dict(m: Match):
+    """
+    Return a dict with all the information required by soccerLogger, in the right format
+    """
+    d=dict()
+    d={
+        "addictional attirbutes":m.additional_attributes,
+        "competition_id":m.competition_id,
+        "date_utc":m.date_utc,
+        "match_id":m.id,
+        "round":m.round,
+        "season":m.season,
+        "match official":{
+            "arbitrator":m.officials[0],
+            "linesman1":m.officials[1],
+            "linesman2":m.officials[2],
+            "fourth_man":m.officials[3]
+        },
+        "home_team":{
+            "team_id":m.home_team_id,
+            "coach_id":m.home_team_manager,
+            "score":0,
+            "formation":{
+                "bench":[
+                    create_player_info(m.home_team_formation[12]),
+                    create_player_info(m.home_team_formation[13]),
+                    create_player_info(m.home_team_formation[14]),
+                    create_player_info(m.home_team_formation[15]),
+                    create_player_info(m.home_team_formation[16]),
+                    create_player_info(m.home_team_formation[17]),
+                    create_player_info(m.home_team_formation[18]),
+                    create_player_info(m.home_team_formation[19]),
+                    create_player_info(m.home_team_formation[20]),
+                    create_player_info(m.home_team_formation[21]),
+                    create_player_info(m.home_team_formation[22]),
+                    create_player_info(m.home_team_formation[23])
+                ],
+                "lineup":[
+                    create_player_info(m.home_team_formation[0]),
+                    create_player_info(m.home_team_formation[1]),
+                    create_player_info(m.home_team_formation[2]),
+                    create_player_info(m.home_team_formation[3]),
+                    create_player_info(m.home_team_formation[4]),
+                    create_player_info(m.home_team_formation[5]),
+                    create_player_info(m.home_team_formation[6]),
+                    create_player_info(m.home_team_formation[7]),
+                    create_player_info(m.home_team_formation[8]),
+                    create_player_info(m.home_team_formation[9]),
+                    create_player_info(m.home_team_formation[10]),
+                ]
+            }
+        },
+        "away_team_formation":{
+            "team_id":m.away_team_formation,
+            "coach_id":m.away_team_manager,
+            "score":0,
+            "formation":{
+                "bench":[
+                    create_player_info(m.away_team_formation[12]),
+                    create_player_info(m.away_team_formation[13]),
+                    create_player_info(m.away_team_formation[14]),
+                    create_player_info(m.away_team_formation[15]),
+                    create_player_info(m.away_team_formation[16]),
+                    create_player_info(m.away_team_formation[17]),
+                    create_player_info(m.away_team_formation[18]),
+                    create_player_info(m.away_team_formation[19]),
+                    create_player_info(m.away_team_formation[20]),
+                    create_player_info(m.away_team_formation[21]),
+                    create_player_info(m.away_team_formation[22]),
+                    create_player_info(m.away_team_formation[23])
+                ],
+                "lineup":[
+                    create_player_info(m.away_team_formation[0]),
+                    create_player_info(m.away_team_formation[1]),
+                    create_player_info(m.away_team_formation[2]),
+                    create_player_info(m.away_team_formation[3]),
+                    create_player_info(m.away_team_formation[4]),
+                    create_player_info(m.away_team_formation[5]),
+                    create_player_info(m.away_team_formation[6]),
+                    create_player_info(m.away_team_formation[7]),
+                    create_player_info(m.away_team_formation[8]),
+                    create_player_info(m.away_team_formation[9]),
+                    create_player_info(m.away_team_formation[10]),
+                ]
+            }
+        }
+    }
+    return d
