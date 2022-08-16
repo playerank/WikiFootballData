@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, responses
 from usersAPI import oauth2_scheme
-import services.data_service as svc
+import services.team_service as svc
+from services.user_service import verify_role
 
 router = APIRouter(
     prefix="/teams",
@@ -45,7 +46,7 @@ async def assess_team(username: str, team_name: str):
     Confirm definetely the team name, if team inexistent or already confirmed definetely return error
     Only administrators or editors can call this function
     """
-    role=svc.verify_role(username)
+    role=verify_role(username)
     if role!="A" and role!="E":
         return responses.JSONResponse(content={"message":"Forbidden Operation"},status_code=403)
     result=svc.assess_team(team_name)
@@ -61,7 +62,7 @@ async def modify_team(username: str, team_name: str, new_team_name: str):
     Modify and confirm definetely the team name, if team inexistent return error
     Only administrators or editors can call this function
     """
-    role=svc.verify_role(username)
+    role=verify_role(username)
     if role!="A" and role!="E":
         return responses.JSONResponse(content={"message":"Forbidden Operation"},status_code=403)
     if not svc.modify_team(team_name, new_team_name):

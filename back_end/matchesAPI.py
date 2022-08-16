@@ -3,7 +3,8 @@ from typing import List
 from fastapi import APIRouter, Depends, responses 
 from pydantic import HttpUrl, Json
 from usersAPI import oauth2_scheme
-import services.data_service as svc
+import services.match_service as svc
+from services.user_service import verify_role
 
 router = APIRouter(
     prefix="/matches",
@@ -135,7 +136,7 @@ async def assess_officials_and_managers(match_id, username: str, token: str=Depe
     Confirm definetely the match officials and managers.
     Only administrators or editors can call this function
     """
-    role=svc.verify_role(username)
+    role=verify_role(username)
     if role!="A" and role!="E":
         return responses.JSONResponse(content={"message":"Forbidden Operation"},status_code=403)
     result=svc.assess_off_and_man(username, match_id)
@@ -151,7 +152,7 @@ async def modify_officials_and_managers(match_id, username: str, home_team_manag
     Modify and confirm definetely the officials and managers.
     Only administrators and editors can call this function
     """
-    role=svc.verify_role(username)
+    role=verify_role(username)
     if role!="A" and role!="E":
         return responses.JSONResponse(content={"message":"Forbidden Operation"},status_code=403)
     if not svc.modify_off_and_man(match_id, username, home_team_manager, away_team_manager, arbitrator, linesman1, linesman2, fourth_man):
@@ -164,6 +165,8 @@ async def add_home_formation(match_id, player_names: List[str], player_numbers: 
     Add to the match the formation of the home team, the order must be lineup then bench and the lineup must be in order gk->d->m->s from left to right.
     If the match_id is incorrect return error
     """
+    #debug
+    # print(player_names,player_numbers)
     l1=len(player_names)
     if l1!=22:
         return responses.JSONResponse(content={"message":"Incorrect number of values, you must insert 22 players"},status_code=400)
@@ -212,7 +215,7 @@ async def assess_formations(match_id, username: str, token: str=Depends(oauth2_s
     Confirm definetely the match fromations.
     Only administrators or editors can call this function
     """
-    role=svc.verify_role(username)
+    role=verify_role(username)
     if role!="A" and role!="E":
         return responses.JSONResponse(content={"message":"Forbidden Operation"},status_code=403)
     result=svc.assess_formations(match_id, username)
@@ -220,15 +223,15 @@ async def assess_formations(match_id, username: str, token: str=Depends(oauth2_s
         return responses.JSONResponse(content={"message":"match_id is incorrect"},status_code=400)
     if result==2:
         return responses.JSONResponse(content={"message":"formations already confirmed"},status_code=400)
-    return {"message":"fromations confirmed successfully!"}
+    return {"message":"formations confirmed successfully!"}
 
-@router.post("/Modify-team-formations")
-async def modify_formations(match_id, username: str, home_team_players: List[str], home_team_numbers: List[int], away_team_players: List[str], away_team_numbers: List[int], token: str=Depends(oauth2_scheme)):
+@router.post("/Modify-home-team-formation")
+async def modify_home_formation(match_id, username: str, home_team_players: List[str], home_team_numbers: List[int], token: str=Depends(oauth2_scheme)):
     """
-    Modify and confirm definetely the formations.
+    Modify and confirm definetely the home formation.You should call this function only when the away formation is correct
     Only administrators and editors can call this function
     """
-    role=svc.verify_role(username)
+    role=verify_role(username)
     if role!="A" and role!="E":
         return responses.JSONResponse(content={"message":"Forbidden Operation"},status_code=403)
     l1=len(home_team_players)
@@ -237,21 +240,40 @@ async def modify_formations(match_id, username: str, home_team_players: List[str
     l2=len(home_team_numbers)
     if l1!=l2:
         return responses.JSONResponse(content={"message":f"Incorrect number of values, there are {l1} home_team_players but {l2} home_team_numbers"},status_code=400)
-    l3=len(away_team_players)
-    if l3!=22:
-        return responses.JSONResponse(content={"message":"Incorrect number of values, you must insert 22 away_team_players"},status_code=400)
-    l4=len(away_team_numbers)
-    if l3!=l4:
-        return responses.JSONResponse(content={"message":f"Incorrect number of values, there are {l3} away_team_players but {l4} away_team_numbers"},status_code=400)
-    #now I know that there are 22 home players/numbers and 22 away players/numbers
-    home_team_players.extend(away_team_players)
-    home_team_numbers.extend(away_team_numbers)
-    for pn in home_team_numbers:
-        if pn<0:
+    for n in home_team_numbers:
+        if n<0:
             return responses.JSONResponse(content={"message":"Invalid shirt number value"},status_code=400)
-    result=svc.modify_formations(match_id, username, home_team_players, home_team_numbers)
+    result=svc.modify_formations(match_id, True, username, home_team_players, home_team_numbers)
     if result==1:
         return responses.JSONResponse(content={"message":"match_id is incorrect"},status_code=400)
+    if result==2:
+        return responses.JSONResponse(content={"message":"Home formation is absent, use the function add-home-team-formation"},status_code=400)
+    return {"message":"Home formation updated and confirmed successfully!"}
+
+@router.post("/Modify-away-team-formation")
+async def modify_away_formation(match_id, username: str, away_team_players: List[str], away_team_numbers: List[int], token: str=Depends(oauth2_scheme)):
+    """
+    Modify and confirm definetely the away formation. You should call this function only when the home formation is correct
+    Only administrators and editors can call this function
+    """
+    role=verify_role(username)
+    if role!="A" and role!="E":
+        return responses.JSONResponse(content={"message":"Forbidden Operation"},status_code=403)
+    l1=len(away_team_players)
+    if l1!=22:
+        return responses.JSONResponse(content={"message":"Incorrect number of values, you must insert 22 home_team_players"},status_code=400)
+    l2=len(away_team_numbers)
+    if l1!=l2:
+        return responses.JSONResponse(content={"message":f"Incorrect number of values, there are {l1} home_team_players but {l2} home_team_numbers"},status_code=400)
+    for n in away_team_numbers:
+        if n<0:
+            return responses.JSONResponse(content={"message":"Invalid shirt number value"},status_code=400)
+    result=svc.modify_formations(match_id, False, username, away_team_players, away_team_numbers)
+    if result==1:
+        return responses.JSONResponse(content={"message":"match_id is incorrect"},status_code=400)
+    if result==2:
+        return responses.JSONResponse(content={"message":"Away formation is absent, use the function add-away-team-formation"},status_code=400)
+    return {"message":"Away formation updated and confirmed successfully!"}
 
 @router.get("/get-data")
 async def get_data(match_id, token: str=Depends(oauth2_scheme)):
@@ -422,7 +444,7 @@ async def assess_name(username: str, match_id, token: str=Depends(oauth2_scheme)
     Confirm definitely the match name in the db, if the match_id is incorrect or match_name already confirmed return error
     Only administrators or editors can call this function
     """
-    role=svc.verify_role(username)
+    role=verify_role(username)
     if role!="A" and role!="E":
         return responses.JSONResponse(content={"message":"Forbidden Operation"},status_code=403)
     result=svc.assess_name(username, match_id)
@@ -438,7 +460,7 @@ async def modify_name(username: str, match_id, home_team: str, away_team: str, s
     Modify and confirm definitely the match name in the db, if the match_name is incorrect return error
     Only administrators or editors can call this function
     """
-    role=svc.verify_role(username)
+    role=verify_role(username)
     if role!="A" and role!="E":
         return responses.JSONResponse(content={"message":"Forbidden Operation"},status_code=403)
     result=svc.change_name(False, match_id, home_team, away_team, season, competition_name, round, date, link, extended_time, penalty)
@@ -452,7 +474,7 @@ async def assess_link(username: str,match_id, token: str=Depends(oauth2_scheme))
     Confirm definitely the match link in the db, if the match_name is incorrect return error
     Only administrators or editors can call this function
     """
-    role=svc.verify_role(username)
+    role=verify_role(username)
     if role!="A" and role!="E":
         return responses.JSONResponse(content={"message":"Forbidden Operation"},status_code=403)
     result=svc.assess_link(username, match_id)
@@ -468,7 +490,7 @@ async def modify_link(username: str,match_id, link: HttpUrl, token: str=Depends(
     Modify and confirm definitely the match link in the db, if the match_name is incorrect return error
     Only administrators or editors can call this function
     """
-    role=svc.verify_role(username)
+    role=verify_role(username)
     if role!="A" and role!="E":
         return responses.JSONResponse(content={"message":"Forbidden Operation"},status_code=403)
     if not svc.modify_link(username, match_id, link):
@@ -481,7 +503,7 @@ async def assess_match_report(username: str, match_id, token: str=Depends(oauth2
     Confirm definitely the match report in the db, if the match_name is incorrect return error
     Only administrators or editors can call this function
     """
-    role=svc.verify_role(username)
+    role=verify_role(username)
     if role!="A" and role!="E":
         return responses.JSONResponse(content={"message":"Forbidden Operation"},status_code=403)
     result=svc.assess_report(username, match_id)
@@ -497,7 +519,7 @@ async def modify_match_report(username: str, match_id, report: str, token: str=D
     Modify and confirm definitely the match report in the db, if the match_name is incorrect return error
     Only administrators or editors can call this function
     """
-    role=svc.verify_role(username)
+    role=verify_role(username)
     if role!="A" and role!="E":
         return responses.JSONResponse(content={"message":"Forbidden Operation"},status_code=403)
     if not svc.modify_report(username, match_id, report):

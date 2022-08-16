@@ -1,6 +1,6 @@
 from typing import Dict
 from fastapi import APIRouter, Depends, HTTPException, responses
-import services.data_service as svc
+import services.user_service as svc
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from datetime import datetime,timedelta
 from jose import jwt

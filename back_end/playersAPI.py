@@ -1,8 +1,8 @@
 from fastapi import APIRouter, responses, Depends
 from usersAPI import oauth2_scheme
 from datetime import datetime
-#import services.data_service as svc
 import services.player_service as svc
+from services.user_service import verify_role
 
 router = APIRouter(
     prefix="/players",
@@ -87,7 +87,7 @@ async def assess_player(username: str, player_name: str, date_of_birth_str: str)
         except:
             return responses.JSONResponse(content={"message":f"date {date_of_birth_str} is in a wrong format"},status_code=400)
 
-    role=svc.verify_role(username)
+    role=verify_role(username)
     if role!="A" and role!="E":
         return responses.JSONResponse(content={"message":"Forbidden Operation"},status_code=403)
     result=svc.assess_player(player_name, date_of_birth)
@@ -118,7 +118,7 @@ async def modify_player(username: str, player_name: str, date_of_birth_str: str,
         except:
             return responses.JSONResponse(content={"message":f"date {new_date_of_birth_str} is in a wrong format"},status_code=400)
 
-    role=svc.verify_role(username)
+    role=verify_role(username)
     if role!="A" and role!="E":
         return responses.JSONResponse(content={"message":"Forbidden Operation"},status_code=403)
     result=svc.change_player(player_name, date_of_birth, new_player_name, new_date_of_birth, new_nationality, False)

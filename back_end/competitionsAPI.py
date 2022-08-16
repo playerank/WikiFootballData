@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, responses
 from usersAPI import oauth2_scheme
-import services.data_service as svc
+import services.competition_service as svc
+from services.user_service import verify_role
 
 router = APIRouter(
     prefix="/competitions",
@@ -47,7 +48,7 @@ async def assess_competition(username: str, competition_name: str, competition_c
     Confirm definetely the competition name and add the competition code, if competition inexistent or already confirmed definetely return error
     Only administrators or editors can call this function
     """
-    role=svc.verify_role(username)
+    role=verify_role(username)
     if role!="A" and role!="E":
         return responses.JSONResponse(content={"message":"Forbidden Operation"},status_code=403)
     result=svc.assess_competition(competition_name,competition_code)
@@ -63,7 +64,7 @@ async def modify_competition(username: str, competition_name: str, new_competiti
     Modify and confirm definetely the competition name and code, if competition inexistent return error
     Only administrators or editors can call this function
     """
-    role=svc.verify_role(username)
+    role=verify_role(username)
     if role!="A" and role!="E":
         return responses.JSONResponse(content={"message":"Forbidden Operation"},status_code=403)
     if not svc.modify_competition(competition_name,new_competition_name,new_competition_code):

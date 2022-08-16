@@ -7,7 +7,7 @@ import teamsAPI
 import playersAPI
 import data.mongo_setup as mongo_setup
 from data.rules import n
-import services.data_service as svc
+from services.user_service import verify_role
 
 app = FastAPI()
 app.include_router(usersAPI.router)
@@ -54,7 +54,7 @@ async def get_N(username: str, token: str=Depends(usersAPI.oauth2_scheme)):
     Return the value of N
     Only administrators can call this funcion
     """
-    if svc.verify_role(username)!="A":
+    if verify_role(username)!="A":
         return responses.JSONResponse(content={"message":"Forbidden Operation"},status_code=403)
     return n
 
@@ -64,7 +64,7 @@ async def change_N(username: str, new_value: int, token: str=Depends(usersAPI.oa
     Change the value of N, it's not retroactive, if new_value is incorrect return error
     Only administrators can call this function
     """
-    if svc.verify_role(username)!="A":
+    if verify_role(username)!="A":
         return responses.JSONResponse(content={"message":"Forbidden Operation"},status_code=403)
     if new_value>usersAPI.get_user_n():
         return responses.JSONResponse(content={"message":"value is incorrect"},status_code=400)
