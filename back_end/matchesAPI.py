@@ -17,7 +17,7 @@ async def get_completed_match_list(n: int):
     Get n completed matches from db.
     Even non-user can call this function
     """
-    if n<=0:
+    if n<0:
         return responses.JSONResponse(content={"message":"invalid value"},status_code=400)
     c_matches=svc.get_completed_matches(n)
     return c_matches
@@ -176,7 +176,7 @@ async def add_home_formation(match_id, player_names: List[str], player_numbers: 
     for pn in player_numbers:
         if pn<0:
             return responses.JSONResponse(content={"message":"Invalid shirt number value"},status_code=400)
-    result=svc.add_team_formation(match_id, 0, player_names, player_numbers)
+    result=svc.add_team_formation(match_id, True, player_names, player_numbers)
     if result==1:
         return responses.JSONResponse(content={"message":"match_id is incorrect"},status_code=400)
     if result==2:
@@ -200,7 +200,7 @@ async def add_away_formation(match_id, player_names: List[str], player_numbers: 
     for pn in player_numbers:
         if pn<0:
             return responses.JSONResponse(content={"message":"Invalid shirt number value"},status_code=400)
-    result=svc.add_team_formation(match_id, 1, player_names, player_numbers)
+    result=svc.add_team_formation(match_id, False, player_names, player_numbers)
     if result==1:
         return responses.JSONResponse(content={"message":"match_id is incorrect"},status_code=400)
     if result==2:
@@ -243,7 +243,7 @@ async def modify_home_formation(match_id, username: str, home_team_players: List
     for n in home_team_numbers:
         if n<0:
             return responses.JSONResponse(content={"message":"Invalid shirt number value"},status_code=400)
-    result=svc.modify_formations(match_id, True, username, home_team_players, home_team_numbers)
+    result=svc.modify_formation(match_id, True, username, home_team_players, home_team_numbers)
     if result==1:
         return responses.JSONResponse(content={"message":"match_id is incorrect"},status_code=400)
     if result==2:
@@ -268,45 +268,52 @@ async def modify_away_formation(match_id, username: str, away_team_players: List
     for n in away_team_numbers:
         if n<0:
             return responses.JSONResponse(content={"message":"Invalid shirt number value"},status_code=400)
-    result=svc.modify_formations(match_id, False, username, away_team_players, away_team_numbers)
+    result=svc.modify_formation(match_id, False, username, away_team_players, away_team_numbers)
     if result==1:
         return responses.JSONResponse(content={"message":"match_id is incorrect"},status_code=400)
     if result==2:
         return responses.JSONResponse(content={"message":"Away formation is absent, use the function add-away-team-formation"},status_code=400)
     return {"message":"Away formation updated and confirmed successfully!"}
 
-@router.get("/get-data")
-async def get_data(match_id, token: str=Depends(oauth2_scheme)):
-    """
-    Get data of the match from db, if the match_id is incorrect return error
-    """
-    data=svc.get_data(match_id)
-    if not data:
-        return responses.JSONResponse(content={"message":"match_id is incorrect"},status_code=400)
-    return data
-
-@router.get("/get-elaborated-data")
-async def get_elaborated_data(match_id, n: int, token: str=Depends(oauth2_scheme)):
-    """
-    Get n elaborated data of the match from db, if n==0 get all elaborated data of the match
-    """
-    if n<0:
-        return responses.JSONResponse(content={"message":"invalid n value"},status_code=400)
-    e_data=svc.get_elaborated_data(match_id, n)
-    if not e_data:
-        return responses.JSONResponse(content={"message":"this match doesn't have any elaborated data"},status_code=400)
-    return e_data
-
 @router.post("/change-name")
 async def change_match_name(match_id, home_team: str, away_team: str, season: str, competition_name: str, round: str, date: datetime, link: HttpUrl, extended_time: bool, penalty: bool):
     """
     Change the name of the match, if the match_id is incorrect or match is already confirmed return error
     """
-    result=svc.change_name(True, match_id, home_team, away_team, season, competition_name, round, date, link, extended_time, penalty)
+    result=svc.change_name(True, None, match_id, home_team, away_team, season, competition_name, round, date, link, extended_time, penalty)
     if result==1:
         return responses.JSONResponse(content={"message":"match_id is incorrect"},status_code=400)
     if result==2:
         return responses.JSONResponse(content={"message":"match already confirmed"},status_code=403)
+    return {"message":"Match name updated successfully!"}
+
+@router.post("/assess-name")
+async def assess_name(username: str, match_id, token: str=Depends(oauth2_scheme)):
+    """
+    Confirm definitely the match name in the db, if the match_id is incorrect or match_name already confirmed return error
+    Only administrators or editors can call this function
+    """
+    role=verify_role(username)
+    if role!="A" and role!="E":
+        return responses.JSONResponse(content={"message":"Forbidden Operation"},status_code=403)
+    result=svc.assess_name(username, match_id)
+    if result==1:
+        return responses.JSONResponse(content={"message":"match_id is incorrect"},status_code=400)
+    if result==2:
+        return responses.JSONResponse(content={"message":"match_name already confirmed"},status_code=400)
+    return {"message":"match_name confirmed successfully!"}
+
+@router.post("/modify-name")
+async def modify_name(username: str, match_id, home_team: str, away_team: str, season: str, competition_name: str, round: str, date: datetime, link: HttpUrl, extended_time: bool, penalty: bool):
+    """
+    Modify and confirm definitely the match name in the db, if the match_name is incorrect return error
+    Only administrators or editors can call this function
+    """
+    role=verify_role(username)
+    if role!="A" and role!="E":
+        return responses.JSONResponse(content={"message":"Forbidden Operation"},status_code=403)
+    if svc.change_name(False, username, match_id, home_team, away_team, season, competition_name, round, date, link, extended_time, penalty)==1:
+        return responses.JSONResponse(content={"message":"match_id is incorrect"},status_code=400)
     return {"message":"Match name updated successfully!"}
 
 @router.post("/change-link")
@@ -314,25 +321,41 @@ async def change_match_link(match_id, new_link: HttpUrl, token: str=Depends(oaut
     """
     Change the link of the match, if match_id is incorrect or match link is already confirmed return error
     """
-    result=svc.change_match_link(match_id,new_link)
+    result=svc.change_link(True, None, match_id, new_link)
     if result==1:
         return responses.JSONResponse(content={"message":"match_id is incorrect"},status_code=400)
     if result==2:
         return responses.JSONResponse(content={"message":"match link already confirmed"},status_code=403)
     return {"message":"Match link updated successfully!"}
-    
 
-@router.post("/change-report")
-async def change_match_report(match_id, report: str, token: str=Depends(oauth2_scheme)):
+@router.post("/assess-link")
+async def assess_link(username: str,match_id, token: str=Depends(oauth2_scheme)):
     """
-    Change the report of the match, if match_id is incorrect or match report is already confirmed return error
+    Confirm definitely the match link in the db, if the match_name is incorrect return error
+    Only administrators or editors can call this function
     """
-    result=svc.change_match_report(match_id,report)
+    role=verify_role(username)
+    if role!="A" and role!="E":
+        return responses.JSONResponse(content={"message":"Forbidden Operation"},status_code=403)
+    result=svc.assess_link(username, match_id)
     if result==1:
         return responses.JSONResponse(content={"message":"match_id is incorrect"},status_code=400)
     if result==2:
-        return responses.JSONResponse(content={"message":"match report already confirmed"},status_code=403)
-    return {"message":"Match report updated successfully!"}
+        return responses.JSONResponse(content={"message":"link already confirmed"},status_code=400)
+    return {"message":"link confirmed successfully!"}
+
+@router.post("/modify-link")
+async def modify_link(username: str,match_id, link: HttpUrl, token: str=Depends(oauth2_scheme)):
+    """
+    Modify and confirm definitely the match link in the db, if the match_name is incorrect return error
+    Only administrators or editors can call this function
+    """
+    role=verify_role(username)
+    if role!="A" and role!="E":
+        return responses.JSONResponse(content={"message":"Forbidden Operation"},status_code=403)
+    if svc.change_link(False, username, match_id, link)==1:
+        return responses.JSONResponse(content={"message":"match_id is incorrect"},status_code=400)
+    return {"message":"link updated and confirmed successfully!"}
 
 @router.get("/get-report")
 async def get_match_report(match_id, token: str=Depends(oauth2_scheme)):
@@ -356,9 +379,49 @@ async def add_match_report(match_id, match_report: str, token: str=Depends(oauth
         return responses.JSONResponse(content={"message":"match report already added"},status_code=400)
     return {"message":"Report added successfully!"}
 
+@router.post("/change-report")
+async def change_match_report(match_id, report: str, token: str=Depends(oauth2_scheme)):
+    """
+    Change the report of the match, if match_id is incorrect or match report is already confirmed return error
+    """
+    result=svc.change_match_report(True, None, match_id, report)
+    if result==1:
+        return responses.JSONResponse(content={"message":"match_id is incorrect"},status_code=400)
+    if result==2:
+        return responses.JSONResponse(content={"message":"match report already confirmed"},status_code=403)
+    return {"message":"Match report updated successfully!"}
+
+@router.post("/assess-report")
+async def assess_match_report(username: str, match_id, token: str=Depends(oauth2_scheme)):
+    """
+    Confirm definitely the match report in the db, if the match_name is incorrect return error
+    Only administrators or editors can call this function
+    """
+    role=verify_role(username)
+    if role!="A" and role!="E":
+        return responses.JSONResponse(content={"message":"Forbidden Operation"},status_code=403)
+    result=svc.assess_match_report(username, match_id)
+    if result==1:
+        return responses.JSONResponse(content={"message":"match_id is incorrect"},status_code=400)
+    if result==2:
+        return responses.JSONResponse(content={"message":"Report already confirmed"},status_code=400)
+    return {"message":"Report confirmed successfully!"}
+
+@router.post("/modify-report")
+async def modify_match_report(username: str, match_id, report: str, token: str=Depends(oauth2_scheme)):
+    """
+    Modify and confirm definitely the match report in the db, if the match_name is incorrect return error
+    Only administrators or editors can call this function
+    """
+    role=verify_role(username)
+    if role!="A" and role!="E":
+        return responses.JSONResponse(content={"message":"Forbidden Operation"},status_code=403)
+    if svc.change_match_report(False, username, match_id, report)==1:
+        return responses.JSONResponse(content={"message":"match_id is incorrect"},status_code=400)
+    return {"message":"report updated and confirmed successfully!"}
 
 @router.get("/get-workers")
-async def get_workers(match_id, token: str=Depends(oauth2_scheme)): #NON IMPLEMENTATA BENE, si potrebbe rimuovere
+async def get_workers(match_id, token: str=Depends(oauth2_scheme)): #NON IMPLEMENTATA PER SCELTA, si potrebbe rimuovere
     """
     Get the workers set of the match from db, if the match_id is incorrect return error
     """
@@ -411,6 +474,28 @@ async def add_data(username: str, match_id, data_index: int, detail: str, token:
         return responses.JSONResponse(content={"message":"time_slot is being analyzed by another user"},status_code=400)
     return {"message":"match data updated successfully!"}
 
+@router.get("/get-data")
+async def get_data(match_id, token: str=Depends(oauth2_scheme)):
+    """
+    Get data of the match from db, if the match_id is incorrect return error
+    """
+    data=svc.get_data(match_id)
+    if not data:
+        return responses.JSONResponse(content={"message":"match_id is incorrect"},status_code=400)
+    return data
+
+@router.get("/get-elaborated-data")
+async def get_elaborated_data(match_id, n: int, token: str=Depends(oauth2_scheme)):
+    """
+    Get n elaborated data of the match from db, if n==0 get all elaborated data of the match
+    """
+    if n<0:
+        return responses.JSONResponse(content={"message":"invalid n value"},status_code=400)
+    e_data=svc.get_elaborated_data(match_id, n)
+    if not e_data:
+        return responses.JSONResponse(content={"message":"this match doesn't have any elaborated data"},status_code=400)
+    return e_data
+
 @router.post("/validate")
 async def validate_data(username: str, match_id, data_index: int, judgement: bool): #token: str=Depends(oauth2_scheme)):
     """
@@ -436,92 +521,3 @@ async def read_journal(match_id, token: str=Depends(oauth2_scheme)):
     if not journal:
         return responses.JSONResponse(content={"message":"match_id is incorrect"},status_code=400)
     return journal
-
-
-@router.post("/assess-name")
-async def assess_name(username: str, match_id, token: str=Depends(oauth2_scheme)):
-    """
-    Confirm definitely the match name in the db, if the match_id is incorrect or match_name already confirmed return error
-    Only administrators or editors can call this function
-    """
-    role=verify_role(username)
-    if role!="A" and role!="E":
-        return responses.JSONResponse(content={"message":"Forbidden Operation"},status_code=403)
-    result=svc.assess_name(username, match_id)
-    if result==1:
-        return responses.JSONResponse(content={"message":"match_id is incorrect"},status_code=400)
-    if result==2:
-        return responses.JSONResponse(content={"message":"match_name already confirmed"},status_code=400)
-    return {"message":"match_name confirmed successfully!"}
-
-@router.post("/modify-name")
-async def modify_name(username: str, match_id, home_team: str, away_team: str, season: str, competition_name: str, round: str, date: datetime, link: HttpUrl, extended_time: bool, penalty: bool):
-    """
-    Modify and confirm definitely the match name in the db, if the match_name is incorrect return error
-    Only administrators or editors can call this function
-    """
-    role=verify_role(username)
-    if role!="A" and role!="E":
-        return responses.JSONResponse(content={"message":"Forbidden Operation"},status_code=403)
-    result=svc.change_name(False, match_id, home_team, away_team, season, competition_name, round, date, link, extended_time, penalty)
-    if result==1:
-        return responses.JSONResponse(content={"message":"match_id is incorrect"},status_code=400)
-    return {"message":"Match name updated successfully!"}
-
-@router.post("/assess-link")
-async def assess_link(username: str,match_id, token: str=Depends(oauth2_scheme)):
-    """
-    Confirm definitely the match link in the db, if the match_name is incorrect return error
-    Only administrators or editors can call this function
-    """
-    role=verify_role(username)
-    if role!="A" and role!="E":
-        return responses.JSONResponse(content={"message":"Forbidden Operation"},status_code=403)
-    result=svc.assess_link(username, match_id)
-    if result==1:
-        return responses.JSONResponse(content={"message":"match_id is incorrect"},status_code=400)
-    if result==2:
-        return responses.JSONResponse(content={"message":"link already confirmed"},status_code=400)
-    return {"message":"link confirmed successfully!"}
-
-@router.post("/modify-link")
-async def modify_link(username: str,match_id, link: HttpUrl, token: str=Depends(oauth2_scheme)):
-    """
-    Modify and confirm definitely the match link in the db, if the match_name is incorrect return error
-    Only administrators or editors can call this function
-    """
-    role=verify_role(username)
-    if role!="A" and role!="E":
-        return responses.JSONResponse(content={"message":"Forbidden Operation"},status_code=403)
-    if not svc.modify_link(username, match_id, link):
-        return responses.JSONResponse(content={"message":"match_id is incorrect"},status_code=400)
-    return {"message":"link updated and confirmed successfully!"}
-
-@router.post("/assess-report")
-async def assess_match_report(username: str, match_id, token: str=Depends(oauth2_scheme)):
-    """
-    Confirm definitely the match report in the db, if the match_name is incorrect return error
-    Only administrators or editors can call this function
-    """
-    role=verify_role(username)
-    if role!="A" and role!="E":
-        return responses.JSONResponse(content={"message":"Forbidden Operation"},status_code=403)
-    result=svc.assess_report(username, match_id)
-    if result==1:
-        return responses.JSONResponse(content={"message":"match_id is incorrect"},status_code=400)
-    if result==2:
-        return responses.JSONResponse(content={"message":"Report already confirmed"},status_code=400)
-    return {"message":"Report confirmed successfully!"}
-
-@router.post("/modify-report")
-async def modify_match_report(username: str, match_id, report: str, token: str=Depends(oauth2_scheme)):
-    """
-    Modify and confirm definitely the match report in the db, if the match_name is incorrect return error
-    Only administrators or editors can call this function
-    """
-    role=verify_role(username)
-    if role!="A" and role!="E":
-        return responses.JSONResponse(content={"message":"Forbidden Operation"},status_code=403)
-    if not svc.modify_report(username, match_id, report):
-        return responses.JSONResponse(content={"message":"match_id is incorrect"},status_code=400)
-    return {"message":"report updated and confirmed successfully!"}

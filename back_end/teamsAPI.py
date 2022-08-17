@@ -33,7 +33,7 @@ async def change_team(team_name: str, new_team_name: str):
     """
     Change the team name, if team inexistent or already confirmed definetely return error
     """
-    result=svc.change_team_name(team_name, new_team_name)
+    result=svc.change_team_name(True, team_name, new_team_name)
     if result==1:
         return responses.JSONResponse(content={"message":"team_name is incorrect"}, status_code=400)
     if result==2:
@@ -65,6 +65,6 @@ async def modify_team(username: str, team_name: str, new_team_name: str):
     role=verify_role(username)
     if role!="A" and role!="E":
         return responses.JSONResponse(content={"message":"Forbidden Operation"},status_code=403)
-    if not svc.modify_team(team_name, new_team_name):
+    if svc.change_team_name(False, team_name, new_team_name)==1:
         return responses.JSONResponse(content={"message":"team_name is incorrect"}, status_code=400)
     return {"message":"team updated and confirmed successfully!"}

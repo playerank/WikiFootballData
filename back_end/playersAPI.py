@@ -64,7 +64,7 @@ async def change_player(player_name: str, date_of_birth_str: str, new_player_nam
         except:
             return responses.JSONResponse(content={"message":f"date {new_date_of_birth_str} is in a wrong format"},status_code=400)
 
-    result=svc.change_player(player_name, date_of_birth, new_player_name, new_date_of_birth, new_nationality, True)
+    result=svc.change_player(True, player_name, date_of_birth, new_player_name, new_date_of_birth, new_nationality)
     if result==1:
         return responses.JSONResponse(content={"message":"player parameters are incorrect"}, status_code=400)
     if result==2:
@@ -121,7 +121,7 @@ async def modify_player(username: str, player_name: str, date_of_birth_str: str,
     role=verify_role(username)
     if role!="A" and role!="E":
         return responses.JSONResponse(content={"message":"Forbidden Operation"},status_code=403)
-    result=svc.change_player(player_name, date_of_birth, new_player_name, new_date_of_birth, new_nationality, False)
+    result=svc.change_player(False, player_name, date_of_birth, new_player_name, new_date_of_birth, new_nationality)
     if result==1:
         return responses.JSONResponse(content={"message":"player parameters are incorrect"}, status_code=400)
     if result==3:

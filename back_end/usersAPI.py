@@ -15,7 +15,6 @@ ALGORITHM="HS256"
 
 oauth2_scheme= OAuth2PasswordBearer(tokenUrl="/users/login")
 
-
 def create_access_token(data: Dict[str, str], expires_delta: timedelta):
     to_encode= data.copy()
     expire=datetime.utcnow()+expires_delta
@@ -92,14 +91,14 @@ async def get_user_list(username: str, n: int, token: str=Depends(oauth2_scheme)
     return users
 
 @router.get("/online")
-async def get_online_user_list(username: str, token: str=Depends(oauth2_scheme)):
+async def get_online_user_list(username: str, n: int, token: str=Depends(oauth2_scheme)):
     """
-    Get the online user list from db, the return is in raw format(a list of user object)
+    Get n online users from db, if n==0 then return all online users
     Only administrators can call this function
     """
     if svc.verify_role(username)!="A":
         return responses.JSONResponse(content={"message":"Forbidden Operation"},status_code=403)
-    online_user_list=svc.get_online_users()
+    online_user_list=svc.get_online_users(n)
     return online_user_list
 
 def get_user_n():
