@@ -51,7 +51,7 @@ def add_team(team_name: str) -> bool:
     team.save()
     return True
 
-def change_team_name(team_name: str, new_team_name: str) -> int:
+def change_team_name(check: bool, team_name: str, new_team_name: str):
     """
     Change the name of an existing team.
     Return 1 if the team doesn't exist, 2 if the team is already confirmed
@@ -59,9 +59,12 @@ def change_team_name(team_name: str, new_team_name: str) -> int:
     team=get_team(team_name)
     if not team:
         return 1
-    if team.is_confirmed:
+    if check and team.is_confirmed:
         return 2
-    team.update(team_name=new_team_name)
+    if check:
+        team.update(team_name=new_team_name)
+    else:
+        team.update(team_name=new_team_name, is_confirmed=True)
     return 0
 
 def assess_team(team_name: str) -> int:
@@ -76,14 +79,3 @@ def assess_team(team_name: str) -> int:
         return 2
     team.update(is_confirmed=True)
     return 0
-
-def modify_team(team_name: str, new_team_name: str) -> bool:
-    """
-    Modify the name of an existing team.
-    Return True if operation is successful, False otherwise
-    """
-    team=get_team(team_name)
-    if not team:
-        return False
-    team.update(team_name=new_team_name, is_confirmed=True)
-    return True

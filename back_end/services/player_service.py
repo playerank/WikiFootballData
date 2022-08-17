@@ -65,7 +65,7 @@ def add_player(player_name: str, date_of_birth: datetime, nationality: str, curr
     player.save()
     return 0
 
-def change_player(player_name: str, date_of_birth: datetime, new_player_name: str, new_date_of_birth: datetime, new_nationality: str, check: bool):
+def change_player(check: bool, player_name: str, date_of_birth: datetime, new_player_name: str, new_date_of_birth: datetime, new_nationality: str):
     """
     Change the name of an existing team and if not check confirm it definetely
     Return 1 if the player doesn't exist, 2 if check and the team is already confirmed, 3 if nationality is incorrect

@@ -42,29 +42,6 @@ def get_match(match_id: ObjectId) -> Match:
     #print("Trovato Match {}-{}, competition_id {} season {}, completato? {}".format(match.home_team_id,match.away_team_id,match.competition_id,match.season,match.is_completed))
     return match
 
-def get_matches(n: int) -> List[Match]:
-    """
-    Retrun list of n matches in the db
-    """
-    if n==0:
-        matches: List[Match]=list(Match.objects().all())
-    else:
-        matches: List[Match]=list(Match.objects[:n])
-    #debug
-    # for m in matches:
-    #     print("Match {}-{}, competition_id {} season_id {}, completato? {}".format(m.home_team_id,m.away_team_id,m.competition_id,m.season,m.is_completed))
-    return matches
-
-def get_not_completed_matches(n: int) -> List[Match]:
-    """
-    Return list of n not completed matches in the db
-    """
-    if n==0:
-        nc_matches: List[Match]=list(Match.objects(is_completed=False).all())
-    else:
-        nc_matches: List[Match]=list(Match.objects[:n].filter(is_completed=False))
-    return nc_matches
-
 def get_completed_matches(n: int) -> List[Match]:
     """
     Return the list of n completed matches in the db
@@ -89,6 +66,29 @@ def get_completed_match_data(match_id: ObjectId) -> List | int:
     if not c_match.is_completed:
         return 2
     return c_match.data
+
+def get_matches(n: int) -> List[Match]:
+    """
+    Retrun list of n matches in the db
+    """
+    if n==0:
+        matches: List[Match]=list(Match.objects().all())
+    else:
+        matches: List[Match]=list(Match.objects[:n])
+    #debug
+    # for m in matches:
+    #     print("Match {}-{}, competition_id {} season_id {}, completato? {}".format(m.home_team_id,m.away_team_id,m.competition_id,m.season,m.is_completed))
+    return matches
+
+def get_not_completed_matches(n: int) -> List[Match]:
+    """
+    Return list of n not completed matches in the db
+    """
+    if n==0:
+        nc_matches: List[Match]=list(Match.objects(is_completed=False).all())
+    else:
+        nc_matches: List[Match]=list(Match.objects[:n].filter(is_completed=False))
+    return nc_matches
 
 def add_match(username: str, home_team: str, away_team: str, season: str, competition_name: str,round: str,date: datetime, link: HttpUrl, extended_time: bool, penalty: bool):
     """
@@ -209,7 +209,7 @@ def modify_off_and_man(match_id: ObjectId, username: str, home_team_manager: str
     match.save()
     return True
 
-def add_team_formation(match_id, team: int, player_names: List[str], player_numbers: List[int]):
+def add_team_formation(match_id: ObjectId, home: bool, player_names: List[str], player_numbers: List[int]):
     """
     Add or change the home formation to the match identified by match_id.
     Return 1 if the match doesn't exist, 2 if formations are confirmed, player_name if player_name is incorrect
@@ -224,10 +224,10 @@ def add_team_formation(match_id, team: int, player_names: List[str], player_numb
         player_id=get_player_id(p)
         if not player_id:
             return p
-        match.team_append(team,player_id,p,player_numbers[i])
+        match.team_append(home,player_id,p,player_numbers[i])
         i+=1
     
-    if team==0:
+    if home:
         match.journal.append("Home team formation added or changed")
     else:
         match.journal.append("Away team formation added or changed")
@@ -249,7 +249,7 @@ def assess_formations(match_id: ObjectId, username: str):
     match.save()
     return 0
 
-def modify_formations(match_id: ObjectId, home: bool, username: str, player_names: List[str], player_numbers: List[int]):
+def modify_formation(match_id: ObjectId, home: bool, username: str, player_names: List[str], player_numbers: List[int]):
     """
     Modify and confirm definetely the formations of the match identified by match_id.
     Return 1 if the match doesn't exist, 2 if the formation didn't exist
@@ -295,42 +295,11 @@ def modify_formations(match_id: ObjectId, home: bool, username: str, player_name
         match.journal.append(f"Away team formation updated and confirmed by {username}")
     match.save()
     return 0
-                
 
-def get_data(match_id: ObjectId) -> List[Analysis] | None:
+def change_name(check: bool, username: str, match_id, home_team: str, away_team: str, season: str, competition_name: str, round: str, date: datetime, link: HttpUrl, extended_time: bool, penalty: bool):
     """
-    Return the list of data of the match identified by match_id
-    """
-    match: Match=Match.objects(id=match_id).only('data').first()
-    if not match:
-        return None
-    return match.data
-
-def get_elaborated_data(match_id: ObjectId, n: int) -> List | None:
-    """
-    Return the list of n elaborated data of the match identified by match_id
-    """
-    match: Match=Match.objects(id=match_id).only('data').first()
-    if not match:
-        return None
-    if match.is_completed:
-        return match.data
-    elaborated_data: List[Analysis]=list()
-    if n==0:
-        n=30
-    for d in match.data:
-        if d.author!=None:
-            elaborated_data.append(d)
-            if n==0:
-                break
-            n-=1
-    return elaborated_data
-
-
-def change_name(check: bool, match_id, home_team: str, away_team: str, season: str, competition_name: str, round: str, date: datetime, link: HttpUrl, extended_time: bool, penalty: bool):
-    """
-    Function that change or modify the match name(depends of the value of check).
-    Before changing every value it verify that the new values aren't empty.
+    Change or modify the match name(depends of the value of check).
+    Return 1 if the match doesn't exist, 2 if the match_name is already confirmed
     """
     match=get_match(match_id)
     if not match:
@@ -363,14 +332,47 @@ def change_name(check: bool, match_id, home_team: str, away_team: str, season: s
         match.journal.append("Match name updated")
     else:
         match.is_confirmed=True
-        match.journal.append("Match name updated and confirmed definitely")
+        match.journal.append(f"Match name updated and confirmed definitely by {username}")
     match.save()
     return 0
-    
 
-def change_match_link(match_id: ObjectId, new_link: HttpUrl):
+def assess_name(username: str, match_id: ObjectId):
     """
-    Change the link of the match identified by match_id.
+    Confirms definitely the match name.
+    Return 1 if the match doesn't exist, 2 if the match name is already confirmed
+    """
+    match=get_match(match_id)
+    if not match:
+        return 1
+    if match.is_confirmed:
+        return 2
+    match.is_confirmed=True
+    match.journal.append(f"Match name has been confirmed by {username}")
+    match.save()
+    return 0
+
+def change_link(check: bool, username: str, match_id: ObjectId, new_link: HttpUrl):
+    """
+    Change the link of the match identified by match_id, if check==False confirm it definetely.
+    Return 1 if the match doesn't exist, 2 if the match link is already confirmed
+    """
+    match=get_match(match_id)
+    if not match:
+        return 1
+    if check and match.link_is_confirmed:
+        return 2
+    match.link=new_link
+    if check:
+        match.journal.append(f"Match link updated to {new_link}")
+    else:
+        match.link_is_confirmed=True
+        match.journal.append(f"Match link modified and confirmed by {username}")
+    match.save()
+    return 0
+
+def assess_link(username: str, match_id: ObjectId):
+    """
+    Confirm definitely the link of the match identified by match_id.
     Return 1 if the match doesn't exist, 2 if the match link is already confirmed
     """
     match=get_match(match_id)
@@ -378,29 +380,14 @@ def change_match_link(match_id: ObjectId, new_link: HttpUrl):
         return 1
     if match.link_is_confirmed:
         return 2
-    match.link=new_link
-    match.journal.append(f"Match link updated to {new_link}")
-    match.save()
-    return 0
-
-def change_match_report(match_id: ObjectId, new_report: str):
-    """
-    Change the report of the match identified by match_id.
-    Return 1 if the match doesn't exist, 2 if the match report is already confirmed
-    """
-    match=get_match(match_id)
-    if not match:
-        return 1
-    if match.report_is_confirmed:
-        return 2
-    match.report=new_report
-    match.journal.append("Match report updated")
+    match.link_is_confirmed=True
+    match.journal.append(f"Match link confirmed by {username}")
     match.save()
     return 0
 
 def get_match_report(match_id: ObjectId):
     """
-    Return the report of the meatch identified by match_id
+    Return the report of the match identified by match_id
     """
     match:Match=Match.objects(id=match_id).only('report').first()
     if not match:
@@ -419,6 +406,40 @@ def add_match_report(match_id: ObjectId, report):
         return 2
     match.report=report
     match.journal.append("Match report added")
+    match.save()
+    return 0
+
+def change_match_report(check: bool, username: str, match_id: ObjectId, new_report: str):
+    """
+    Change the report of the match identified by match_id.
+    Return 1 if the match doesn't exist, 2 if the match report is already confirmed
+    """
+    match=get_match(match_id)
+    if not match:
+        return 1
+    if check and match.report_is_confirmed:
+        return 2
+    match.report=new_report
+    if check:
+        match.journal.append("Match report updated")
+    else:
+        match.report_is_confirmed=True
+        match.journal.append(f"Match report modified and confirmed by {username}")
+    match.save()
+    return 0
+
+def assess_match_report(username: str, match_id: ObjectId):
+    """
+    Confirms definitely the match report.
+    Return 1 if the match doesn't exist, 2 if the match report is already confirmed
+    """
+    match=get_match(match_id)
+    if not match:
+        return 1
+    if match.report_is_confirmed:
+        return 2
+    match.report_is_confirmed=True
+    match.journal.append(f"Match report has been confirmed by {username}")
     match.save()
     return 0
 
@@ -481,6 +502,35 @@ def add_data(username: str, match_id: ObjectId, data_index: int, detail: str):#J
     match.save()
     return 0
 
+def get_data(match_id: ObjectId) -> List[Analysis] | None:
+    """
+    Return the list of data of the match identified by match_id
+    """
+    match: Match=Match.objects(id=match_id).only('data').first()
+    if not match:
+        return None
+    return match.data
+
+def get_elaborated_data(match_id: ObjectId, n: int) -> List | None:
+    """
+    Return the list of n elaborated data of the match identified by match_id
+    """
+    match: Match=Match.objects(id=match_id).only('data').first()
+    if not match:
+        return None
+    if match.is_completed:
+        return match.data
+    elaborated_data: List[Analysis]=list()
+    if n==0:
+        n=30
+    for d in match.data:
+        if d.author!=None:
+            elaborated_data.append(d)
+            if n==0:
+                break
+            n-=1
+    return elaborated_data
+
 def create_review(username: str, match_id: ObjectId, data_index: int, judgement: bool):
     """
     Create a Review and check some condition.
@@ -520,7 +570,6 @@ def create_review(username: str, match_id: ObjectId, data_index: int, judgement:
         review.type="d"
     review.save()
     return 0
-
 
 def validate_data(username: str, match_id: ObjectId, data_index: int, judgement: bool):
     """
@@ -588,76 +637,3 @@ def read_journal(match_id: ObjectId):
     if not match:
         return None
     return match.journal
-
-def assess_name(username: str, match_id: ObjectId):
-    """
-    Confirms definitely the match name.
-    Return 1 if the match doesn't exist, 2 if the match name is already confirmed
-    """
-    match=get_match(match_id)
-    if not match:
-        return 1
-    if match.is_confirmed:
-        return 2
-    match.is_confirmed=True
-    match.journal.append(f"Match name has been confirmed by {username}")
-    match.save()
-    return 0
-
-def assess_link(username: str, match_id: ObjectId):
-    """
-    Confirms definitely the match link.
-    Return 1 if the match doesn't exist, 2 if the match link is already confirmed
-    """
-    match=get_match(match_id)
-    if not match:
-        return 1
-    if match.link_is_confirmed:
-        return 2
-    match.link_is_confirmed=True
-    match.journal.append(f"Match link has been confirmed by {username}")
-    match.save()
-    return 0
-
-def modify_link(username: str, match_id: ObjectId, link: HttpUrl) -> bool:
-    """
-    Modify and confirms definitely the match link.
-    Return True if operation is successful, False otherwise
-    """
-    match=get_match(match_id)
-    if not match:
-        return False
-    match.link=link
-    match.link_is_confirmed=True
-    match.journal.append(f"Match link has been modified and confirmed by {username}")
-    match.save()
-    return True
-
-def assess_report(username: str, match_id: ObjectId):
-    """
-    Confirms definitely the match report.
-    Return 1 if the match doesn't exist, 2 if the match report is already confirmed
-    """
-    match=get_match(match_id)
-    if not match:
-        return 1
-    if match.report_is_confirmed:
-        return 2
-    match.report_is_confirmed=True
-    match.journal.append(f"Match report has been confirmed by {username}")
-    match.save()
-    return 0
-
-def modify_report(username: str, match_id: ObjectId, report: HttpUrl) -> bool:
-    """
-    Modify and confirms definitely the match report.
-    Return True if operation is successful, False otherwise
-    """
-    match=get_match(match_id)
-    if not match:
-        return False
-    match.report=report
-    match.report_is_confirmed=True
-    match.journal.append(f"Match report has been modified and confirmed by {username}")
-    match.save()
-    return True

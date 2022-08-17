@@ -95,9 +95,12 @@ def get_users(n: int) -> List[User]:
     #     print("Utente {}: online {}, editor {}, administrator {}".format(u.username,u.is_online,u.is_editor,u.is_administrator))
     return users
 
-def get_online_users() -> List[User]:
+def get_online_users(n: int) -> List[User]:
     """
     Retrun the list of online Users (clearly not the passwords)
     """
-    online_users=list(User.objects().filter(is_online=True).only('username','is_editor','is_administrator').all())
+    if n==0:
+        online_users:List[User]=list(User.objects().filter(is_online=True).only('username','is_editor','is_administrator').all())
+    else:
+        online_users:List[User]=list(User.objects[:n].filter(is_online=True).only('username','is_editor','is_administrator'))
     return online_users
