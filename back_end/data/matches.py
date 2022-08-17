@@ -32,7 +32,7 @@ class Match(mongoengine.Document):
     working: List[str]=mongoengine.ListField()
     link: HttpUrl=mongoengine.URLField(required=True)
     link_is_confirmed: bool=mongoengine.BooleanField(default=False)
-    report=mongoengine.StringField()
+    report: str=mongoengine.StringField()
     report_is_confirmed: bool=mongoengine.BooleanField(default=False)
     journal: List[str]=mongoengine.ListField(default=["Match created!"])
     data: List[Analysis]=mongoengine.EmbeddedDocumentListField(Analysis)
@@ -134,7 +134,7 @@ class Match(mongoengine.Document):
         return True
     
     @property
-    def team_append(self, team: int, player_id: ObjectId, player_name: str, shirt_number: int):
+    def team_append(self, home: bool, player_id: ObjectId, player_name: str, shirt_number: int):
         """
         Append to the indicated formation the Match_Player object with the right parameters
         """
@@ -142,7 +142,7 @@ class Match(mongoengine.Document):
         p.player_id=player_id
         p.player_name=player_name
         p.shirt_number=shirt_number
-        if team==0:
+        if home:
             self.home_team_formation.append(p)
         else:
             self.away_team_formation.append(p)
