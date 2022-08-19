@@ -87,11 +87,11 @@ async def add_match(username: str, home_team: str, away_team: str, season: str, 
     
     result=svc.add_match(username,home_team,away_team,season,competition_name,round,date,link,extended_time,penalty)
     if result==1:
-        return responses.JSONResponse(content={"message":f"competition {competition_name} is incorrect"},status_code=400)
+        return responses.JSONResponse(content={"message":f"competition {competition_name} is incorrect or has not yet been saved in db"},status_code=400)
     if result==2:
-        return responses.JSONResponse(content={"message":f"home_team {home_team} is incorrect"},status_code=400)
+        return responses.JSONResponse(content={"message":f"home_team {home_team} is incorrect or has not yet been saved in db"},status_code=400)
     if result==3:
-        return responses.JSONResponse(content={"message":f"away_team {away_team} is incorrect"},status_code=400)
+        return responses.JSONResponse(content={"message":f"away_team {away_team} is incorrect or has not yet been saved in db"},status_code=400)
     if result==4:
         return responses.JSONResponse(content={"message":"match already exists"},status_code=400)
     return {"message":"match added successfully!"}
@@ -116,6 +116,10 @@ async def add_managers(match_id, home_team_manager: str, away_team_manager: str,
         return responses.JSONResponse(content={"message":"match_id is incorrect"},status_code=400)
     if result==2:
         return responses.JSONResponse(content={"message":"managers already confirmed"},status_code=403)
+    if result==3:
+        return responses.JSONResponse(content={"message":f"manager {home_team_manager} is incorrect or has not yet been saved in db"},status_code=400)
+    if result==4:
+        return responses.JSONResponse(content={"message":f"manager {away_team_manager} is incorrect or has not yet been saved in db"},status_code=400)
     return {"message":"managers added successfully!"}
 
 @router.post("/add-officials")
@@ -155,8 +159,13 @@ async def modify_officials_and_managers(match_id, username: str, home_team_manag
     role=verify_role(username)
     if role!="A" and role!="E":
         return responses.JSONResponse(content={"message":"Forbidden Operation"},status_code=403)
-    if not svc.modify_off_and_man(match_id, username, home_team_manager, away_team_manager, arbitrator, linesman1, linesman2, fourth_man):
+    result=svc.modify_off_and_man(match_id, username, home_team_manager, away_team_manager, arbitrator, linesman1, linesman2, fourth_man)
+    if result==1:
         return responses.JSONResponse(content={"message":"match_id is incorrect"},status_code=400)
+    if result==2:
+        return responses.JSONResponse(content={"message":f"manager {home_team_manager} is incorrect or has not yet been saved in db"},status_code=400)
+    if result==3:
+        return responses.JSONResponse(content={"message":f"manager {away_team_manager} is incorrect or has not yet been saved in db"},status_code=400)
     return {"message":"values updated and confirmed successfully!"}
 
 @router.post("/add-home-team-formation")
