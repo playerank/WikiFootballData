@@ -8,12 +8,12 @@ def get_player_id(player_name: str) -> ObjectId | None:
     """
     Return the id of the player identified by player_name
     """
-    player: Player=Player.objects(player_name=player_name).first()
+    player: Player=Player.objects(name=player_name).first()
     if not player:
         return None
     return player.id
 
-def get_player_by_id(id: ObjectId):
+def get_player_by_id(id: ObjectId) -> Player:
     """
     Return the player identified by id
     """
@@ -24,7 +24,7 @@ def get_player(player_name: str, date_of_birth: datetime) -> Player:
     """
     Return the player identified by player_name
     """
-    player: Player=Player.objects().filter(player_name=player_name).filter(date_of_birth=date_of_birth).first()
+    player: Player=Player.objects().filter(name=player_name).filter(date_of_birth=date_of_birth).first()
     return player
 
 def get_players(n: int):
@@ -56,7 +56,7 @@ def add_player(player_name: str, date_of_birth: datetime, nationality: str, curr
     if e_player:
         return 3
     player=Player()
-    player.player_name=player_name
+    player.name=player_name
     player.date_of_birth=date_of_birth
     player.team_id=team_id
     player.national_team_id=national_team_id
@@ -67,7 +67,7 @@ def add_player(player_name: str, date_of_birth: datetime, nationality: str, curr
 
 def change_player(check: bool, player_name: str, date_of_birth: datetime, new_player_name: str, new_date_of_birth: datetime, new_nationality: str):
     """
-    Change the name of an existing team and if not check confirm it definetely
+    Change the values of an existing player and if not check confirm it definetely
     Return 1 if the player doesn't exist, 2 if check and the team is already confirmed, 3 if nationality is incorrect
     """
     e_player=get_player(player_name, date_of_birth)
@@ -76,7 +76,7 @@ def change_player(check: bool, player_name: str, date_of_birth: datetime, new_pl
     if check and e_player.is_confirmed:
         return 2
     if new_player_name!=" ":
-        e_player.player_name=new_player_name
+        e_player.name=new_player_name
     if new_date_of_birth!=None:
         e_player.date_of_birth=new_date_of_birth
     if new_nationality!=" ":

@@ -9,6 +9,7 @@ from data.reviews import Review
 from services.competition_service import get_competition_id
 from services.team_service import get_team_id
 from services.player_service import get_player_id
+from services.manager_service import get_manager_id
 
 def get_match_id(home_team: str, away_team: str, season: str, competition_name: str):
     """
@@ -137,15 +138,21 @@ def add_match(username: str, home_team: str, away_team: str, season: str, compet
 def add_managers(match_id: ObjectId, home_team_manager: str, away_team_manager: str):
     """
     Add the managers to the match identified by match_id.
-    Return 1 if the match doesn't exist, 2 if values are already confirmed
+    Return 1 if the match doesn't exist, 2 if values are already confirmed, 3 if home_team_manager is incorrect, 4 if away_team_manager is incorrect
     """
     match=get_match(match_id)
     if not match:
         return 1
     if match.officials_and_managers_are_confirmed:
         return 2
-    match.home_team_manager=home_team_manager
-    match.away_team_manager=away_team_manager
+    home_manager_id=get_manager_id(home_team_manager)
+    if not home_manager_id:
+        return 3
+    away_manager_id=get_manager_id(away_team_manager)
+    if not away_manager_id:
+        return 4
+    match.home_manager_id=home_manager_id
+    match.away_manager_id=away_manager_id
     match.journal.append(f"Managers added or changed to {home_team_manager} and {away_team_manager}")
     match.save()
     return 0
@@ -184,18 +191,24 @@ def assess_off_and_man(match_id: ObjectId, username: str):
     match.save()
     return 0
 
-def modify_off_and_man(match_id: ObjectId, username: str, home_team_manager: str, away_team_manager: str, arbitrator: str, linesman1: str, linesman2: str, fourth_man: str) -> bool:
+def modify_off_and_man(match_id: ObjectId, username: str, home_team_manager: str, away_team_manager: str, arbitrator: str, linesman1: str, linesman2: str, fourth_man: str):
     """
     Modify and confirm definetely the officials and managers of the match identified by match_id.
-    Return True if operation is successful, False otherwise
+    Return 1 if match doesn't exist, 2 if home_team_manager is incorrect, 3 if away_team_manager is incorrect
     """
     match=get_match(match_id)
     if not match:
-        return False
+        return 1
     if home_team_manager!=" ":
-        match.home_team_manager=home_team_manager
+        home_manager_id=get_manager_id(home_team_manager)
+        if not home_manager_id:
+            return 2
+        match.home_manager_id=home_manager_id
     if away_team_manager!=" ":
-        match.away_team_manager=away_team_manager
+        away_manager_id=get_manager_id(away_team_manager)
+        if not away_manager_id:
+            return 3
+        match.away_manager_id=away_manager_id
     if arbitrator!=" ":
         match.officials[0]=arbitrator
     if linesman1!=" ":
@@ -207,7 +220,7 @@ def modify_off_and_man(match_id: ObjectId, username: str, home_team_manager: str
     match.officials_and_managers_are_confirmed=True
     match.journal.append(f"Officials and managers updated and confirmed by {username}")
     match.save()
-    return True
+    return 0
 
 def add_team_formation(match_id: ObjectId, home: bool, player_names: List[str], player_numbers: List[int]):
     """
