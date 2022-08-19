@@ -22,8 +22,8 @@ class Match(mongoengine.Document):
     penalty: bool=mongoengine.BooleanField(required=True)
     is_confirmed: bool=mongoengine.BooleanField(default=False)
     officials: List[str]=mongoengine.ListField()
-    home_team_manager: str=mongoengine.StringField()
-    away_team_manager: str=mongoengine.StringField()
+    home_manager_id: ObjectId=mongoengine.ObjectIdField()
+    away_manager_id: ObjectId=mongoengine.ObjectIdField()
     officials_and_managers_are_confirmed=mongoengine.BooleanField(default=False)
     home_team_formation: List[Match_Player]=mongoengine.EmbeddedDocumentListField(Match_Player)
     away_team_formation: List[Match_Player]=mongoengine.EmbeddedDocumentListField(Match_Player)
@@ -171,7 +171,7 @@ def create_info_dict(m: Match):
         },
         "home_team":{
             "team_id":m.home_team_id,
-            "coach_id":m.home_team_manager,
+            "coach_id":m.home_manager_id,
             "score":0,
             "formation":{
                 "bench":[
@@ -205,7 +205,7 @@ def create_info_dict(m: Match):
         },
         "away_team_formation":{
             "team_id":m.away_team_formation,
-            "coach_id":m.away_team_manager,
+            "coach_id":m.away_manager_id,
             "score":0,
             "formation":{
                 "bench":[
