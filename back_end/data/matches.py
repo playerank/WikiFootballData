@@ -27,7 +27,8 @@ class Match(mongoengine.Document):
     officials_and_managers_are_confirmed=mongoengine.BooleanField(default=False)
     home_team_formation: List[Match_Player]=mongoengine.EmbeddedDocumentListField(Match_Player)
     away_team_formation: List[Match_Player]=mongoengine.EmbeddedDocumentListField(Match_Player)
-    formations_are_confirmed: bool=mongoengine.BooleanField(default=False)
+    home_formation_is_confirmed: bool=mongoengine.BooleanField(default=False)
+    away_formation_is_confirmed: bool=mongoengine.BooleanField(default=False)
     additional_attributes: List=mongoengine.ListField()
     working: List[str]=mongoengine.ListField()
     link: HttpUrl=mongoengine.URLField(required=True)
@@ -36,6 +37,8 @@ class Match(mongoengine.Document):
     report_is_confirmed: bool=mongoengine.BooleanField(default=False)
     journal: List[str]=mongoengine.ListField(default=["Match created!"])
     data: List[Analysis]=mongoengine.EmbeddedDocumentListField(Analysis)
+    # started_working: bool=mongoengine.BooleanField(default=False) #DA IMPLEMENTARE
+    #Dovrebbe rappresentare il fatto che link,formazioni,ufficiali e manager e nome della partita non possono più essere modificati 
     is_completed: bool=mongoengine.BooleanField(default=False)
 
     meta={
