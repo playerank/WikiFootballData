@@ -2,14 +2,14 @@ from datetime import datetime
 from typing import List
 from bson import ObjectId
 from pydantic import HttpUrl
-from data.matches import Match, Analysis
+from data.matches import Match, Analysis, create_info_dict
 from data.events import Event
 from data.rules import n
 from data.reviews import Review
-from services.competition_service import get_competition_id
-from services.team_service import get_team_id
+from services.competition_service import get_competition_id, get_competition_by_id
+from services.team_service import get_team_id, get_team_by_id
 from services.player_service import get_player_id
-from services.manager_service import get_manager_id
+from services.manager_service import get_manager_id, get_manager_by_id
 
 def get_match_id(home_team: str, away_team: str, season: str, competition_name: str):
     """
@@ -124,16 +124,66 @@ def add_match(username: str, home_team: str, away_team: str, season: str, compet
     match.save()
     return 0
 
-# def get_match_info(match_id: ObjectId):
-#     """
-#     Return the info of the match identified by match_id
-#     """
-#     match=get_match(match_id)
-#     if not match:
-#         return None
-#     info=list()
-#     info.append(get_competition_by_id(match.competition_id))
-#     info.append(get_team_by_id(match.home_team_id))
+def get_match_info(match_id: ObjectId):
+    """
+    Return the info of the match identified by match_id
+    """
+    m=get_match(match_id)
+    if not m:
+        return None
+    info=dict()
+    info={
+        "Competition":get_competition_by_id(m.competition_id),
+        "Home Team":get_team_by_id(m.home_team_id),
+        "Away Team":get_team_by_id(m.away_team_id),
+        "Season":m.season,
+        "Round":m.round,
+        "Date":m.date_utc
+    }
+    if m.penalty:
+        info.update({"End":"Penalties"})
+    elif m.extended_time:
+        info.update({"End":"120th minute"})
+    else:
+        info.update({"End":"90th minute"})
+    if m.is_confirmed:
+        info.update({"Match Name":"Confirmed"})
+    else:
+        info.update({"Match Name":"Not confirmed"})
+    info.update({
+        "Officials":m.officials,
+        "Home Manager":get_manager_by_id(m.home_manager_id),
+        "Away Manager":get_manager_by_id(m.away_manager_id)
+    })
+    if m.officials_and_managers_are_confirmed:
+        info.update({"Officials and Managers":"Confirmed"})
+    else:
+        info.update({"Officials and Managers":"Not confirmed"})
+    info.update({"Home Team Formation":m.home_team_formation})
+    if m.home_formation_is_confirmed:
+        info.update({"Home Team": "Confirmed"})
+    else:
+        info.update({"Home Team": "Not confirmed"})
+    info.update({"Away Team":m.away_team_formation})
+    if m.away_formation_is_confirmed:
+        info.update({"Away Team": "Confirmed"})
+    else:
+        info.update({"Away Team": "Not confirmed"})
+    info.update({"Link":m.link})
+    if m.link_is_confirmed:
+        info.update({"Link":"Confirmed"})
+    else:
+        info.update({"Link":"Not confirmed"})
+    info.update({"Report":m.report})
+    if m.report_is_confirmed:
+        info.update({"Report":"Confirmed"})
+    else:
+        info.update({"Report":"Not confirmed"})
+    if m.is_completed:
+        info.update({"Match analisys":"Completed"})
+    else:
+        info.update({"Match analysis":"Not completed"})
+    return info
 
 def add_managers(match_id: ObjectId, home_team_manager: str, away_team_manager: str):
     """
@@ -224,14 +274,18 @@ def modify_off_and_man(match_id: ObjectId, username: str, home_team_manager: str
 
 def add_team_formation(match_id: ObjectId, home: bool, player_names: List[str], player_numbers: List[int]):
     """
-    Add or change the home formation to the match identified by match_id.
-    Return 1 if the match doesn't exist, 2 if formations are confirmed, player_name if player_name is incorrect
+    Add or change the requested formation to the match identified by match_id.
+    Return 1 if the match doesn't exist, 2 if the requested formation is confirmed, player_name if player_name is incorrect
     """
     match=get_match(match_id)
     if not match:
         return 1
-    if match.formations_are_confirmed:
-        return 2
+    if home:
+        if match.home_formation_is_confirmed:
+            return 2
+    else:
+        if match.away_formation_is_confirmed:
+            return 2
     i=0
     for p in player_names:
         player_id=get_player_id(p)
@@ -247,24 +301,30 @@ def add_team_formation(match_id: ObjectId, home: bool, player_names: List[str], 
     match.save()
     return 0
 
-def assess_formations(match_id: ObjectId, username: str):
+def assess_formation(match_id: ObjectId, home: bool, username: str):
     """
-    Confirm definetely the formations of the match identified by match_id.
-    Return 1 if the match doesn't exist, 2 if formations are already confirmed
+    Confirm definetely the requested formation of the match identified by match_id.
+    Return 1 if the match doesn't exist, 2 if the requested formation is already confirmed
     """
     match=get_match(match_id)
     if not match:
         return 1
-    if match.formations_are_confirmed:
-        return 2
-    match.formations_are_confirmed=True
-    match.journal.append(f"Formations confirmed by {username}")
+    if home:
+        if match.home_formation_is_confirmed:
+            return 2
+        match.home_formation_is_confirmed=True
+        match.journal.append(f"Home formation confirmed by {username}")
+    else:
+        if match.away_formation_is_confirmed:
+            return 2
+        match.away_formation_is_confirmed=True
+        match.journal.append(f"Away formation confirmed by {username}")
     match.save()
     return 0
 
 def modify_formation(match_id: ObjectId, home: bool, username: str, player_names: List[str], player_numbers: List[int]):
     """
-    Modify and confirm definetely the formations of the match identified by match_id.
+    Modify and confirm definetely the requested formation of the match identified by match_id.
     Return 1 if the match doesn't exist, 2 if the formation didn't exist
     """
     match=get_match(match_id)
@@ -301,10 +361,11 @@ def modify_formation(match_id: ObjectId, home: bool, username: str, player_names
                     match.away_team_formation[i].shirt_number=player_numbers[i]
         i+=1
     #outside the for
-    match.formations_are_confirmed=True
     if home:
+        match.home_formation_is_confirmed=True
         match.journal.append(f"Home team formation updated and confirmed by {username}")
     else:
+        match.away_formation_is_confirmed=True
         match.journal.append(f"Away team formation updated and confirmed by {username}")
     match.save()
     return 0
@@ -467,14 +528,26 @@ def get_workers(match_id: ObjectId) -> List[str] | None:
 
 def get_free_time_slot(match_id: ObjectId):
     """
-    Return the list of the time slot that aren't being analyzed by some user.
-    In case of errror return 1 if the match doesn't exist, 2 if the match is already completed
+    Return the list of the time slot not analyzed yet or that aren't being analyzed by some user.
+    Return 1 if the match doesn't exist, 2 if the match is already completed, 3 if the match name is not confirmed
+    4 if the link is not confirmed, 5 if the officials and managers are not confirmed,
+    6 and 7 if formations are not confirmed
     """
     match:Match=Match.objects(id=match_id).only('data').first()
     if not match:
         return 1
     if match.is_completed:
         return 2
+    if not match.is_confirmed:
+        return 3
+    if not match.link_is_confirmed:
+        return 4
+    if not match.officials_and_managers_are_confirmed:
+        return 5
+    if not match.home_formation_is_confirmed:
+        return 6
+    if not match.away_formation_is_confirmed:
+        return 7
     free_time_slot: List[Analysis]=list()
     for d in match.data:
         if not d.working and not d.author:
@@ -496,7 +569,7 @@ def analyze_time_slot(username: str, match_id: ObjectId, data_index: int):
     match.data[data_index].working=username
     match.journal.append(f"User {username} started working at time slot {match.data[data_index].time_slot}")
     match.save()
-    return 0
+    return create_info_dict(match)
 
 def add_data(username: str, match_id: ObjectId, data_index: int, detail: str):#Json?:
     """
@@ -515,16 +588,23 @@ def add_data(username: str, match_id: ObjectId, data_index: int, detail: str):#J
     match.save()
     return 0
 
-def get_data(match_id: ObjectId) -> List[Analysis] | None:
+def get_data(match_id: ObjectId, n: int) -> List[Analysis] | None:
     """
-    Return the list of data of the match identified by match_id
+    Return a list of n data of the match identified by match_id
     """
     match: Match=Match.objects(id=match_id).only('data').first()
     if not match:
         return None
-    return match.data
+    if n==0 or n>=30:
+        return match.data
+    data_list=list()
+    for d in match.data:
+        if n==0: break
+        data_list.append(d)
+        n-=1
+    return data_list
 
-def get_elaborated_data(match_id: ObjectId, n: int) -> List | None:
+def get_elaborated_data(match_id: ObjectId, n: int) -> List[Analysis] | None:
     """
     Return the list of n elaborated data of the match identified by match_id
     """
