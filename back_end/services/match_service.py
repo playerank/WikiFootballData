@@ -528,12 +528,12 @@ def get_workers(match_id: ObjectId) -> List[str] | None:
 
 def get_free_time_slot(match_id: ObjectId):
     """
-    Return the list of the time slot not analyzed yet or that aren't being analyzed by some user.
+    Return the list of the link and the time slot not analyzed yet or that aren't being analyzed by some user.
     Return 1 if the match doesn't exist, 2 if the match is already completed, 3 if the match name is not confirmed
     4 if the link is not confirmed, 5 if the officials and managers are not confirmed,
     6 and 7 if formations are not confirmed
     """
-    match:Match=Match.objects(id=match_id).only('data').first()
+    match:Match=Match.objects(id=match_id).only('link','data').first()
     if not match:
         return 1
     if match.is_completed:
@@ -548,10 +548,11 @@ def get_free_time_slot(match_id: ObjectId):
         return 6
     if not match.away_formation_is_confirmed:
         return 7
-    free_time_slot: List[Analysis]=list()
+    free_time_slot: List[str]=list()
+    free_time_slot.append(match.link)
     for d in match.data:
         if not d.working and not d.author:
-            free_time_slot.append(d)
+            free_time_slot.append(d.time_slot)
     return free_time_slot
 
 def analyze_time_slot(username: str, match_id: ObjectId, data_index: int):
