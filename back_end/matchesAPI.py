@@ -458,7 +458,7 @@ async def get_workers(match_id, token: str=Depends(oauth2_scheme)): #NON IMPLEME
 @router.get("/get-free-slot")
 async def get_free_time_slot(match_id, token: str=Depends(oauth2_scheme)):
     """
-    Get the list of the free time slot of the match from db, if the match_id is incorrect or the match is completed return error
+    Return the list of the link and the free time slots of the match from db, if the match_id is incorrect or the match is completed return error
     """
     time_slots=svc.get_free_time_slot(match_id)
     if time_slots==1:
@@ -480,7 +480,7 @@ async def get_free_time_slot(match_id, token: str=Depends(oauth2_scheme)):
 @router.post("/analyze-slot")
 async def analyze_time_slot(username: str, match_id, data_index: int, token: str=Depends(oauth2_scheme)):
     """
-    Signal the server that a user started processing the time slot, if the match_id is incorrect, the match is completed or the time_slot is not free return error
+    Signal the server that a user started processing the time slot and return the dict needed by soccerLogger to start working
     This function should be called only after "get_free_time_slot"
     """
     if data_index<0 or data_index>28:
