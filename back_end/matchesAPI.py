@@ -96,15 +96,15 @@ async def add_match(username: str, home_team: str, away_team: str, season: str, 
         return responses.JSONResponse(content={"message":"match already exists"},status_code=400)
     return {"message":"match added successfully!"}
 
-# @router.post("/get-info") #DA FARE
-# async def get_match_info(match_id, token: str=Depends(oauth2_scheme)):
-#     """
-#     To see the info of a match in the db 
-#     """
-#     info=svc.get_match_info(match_id)
-#     if not info:
-#         return responses.JSONResponse(content={"message":"match_id is incorrect"},status_code=400)
-#     return info
+@router.post("/get-info")
+async def get_match_info(match_id, token: str=Depends(oauth2_scheme)):
+    """
+    Return the info, of the requested match, in dict format
+    """
+    info=svc.get_match_info(match_id)
+    if not info:
+        return responses.JSONResponse(content={"message":"match_id is incorrect"},status_code=400)
+    return info
 
 @router.post("/add-managers")
 async def add_managers(match_id, home_team_manager: str, away_team_manager: str, token: str=Depends(oauth2_scheme)):
@@ -218,21 +218,37 @@ async def add_away_formation(match_id, player_names: List[str], player_numbers: 
         return responses.JSONResponse(content={"message":f"player_name {result} is incorrect or has not yet been saved in db"},status_code=400)
     return {"message":"away formation addedd successfully!"}
 
-@router.post("/assess-formations")
-async def assess_formations(match_id, username: str, token: str=Depends(oauth2_scheme)):
+@router.post("/assess-home-formation")
+async def assess_home_formation(match_id, username: str, token: str=Depends(oauth2_scheme)):
     """
-    Confirm definetely the match fromations.
+    Confirm definetely the match home formation.
     Only administrators or editors can call this function
     """
     role=verify_role(username)
     if role!="A" and role!="E":
         return responses.JSONResponse(content={"message":"Forbidden Operation"},status_code=403)
-    result=svc.assess_formations(match_id, username)
+    result=svc.assess_formation(match_id, True, username)
     if result==1:
         return responses.JSONResponse(content={"message":"match_id is incorrect"},status_code=400)
     if result==2:
-        return responses.JSONResponse(content={"message":"formations already confirmed"},status_code=400)
-    return {"message":"formations confirmed successfully!"}
+        return responses.JSONResponse(content={"message":"formation already confirmed"},status_code=400)
+    return {"message":"home formation confirmed successfully!"}
+
+@router.post("/assess-away-formation")
+async def assess_away_formation(match_id, username: str, token: str=Depends(oauth2_scheme)):
+    """
+    Confirm definetely the match away formation.
+    Only administrators or editors can call this function
+    """
+    role=verify_role(username)
+    if role!="A" and role!="E":
+        return responses.JSONResponse(content={"message":"Forbidden Operation"},status_code=403)
+    result=svc.assess_formation(match_id, False, username)
+    if result==1:
+        return responses.JSONResponse(content={"message":"match_id is incorrect"},status_code=400)
+    if result==2:
+        return responses.JSONResponse(content={"message":"formation already confirmed"},status_code=400)
+    return {"message":"away formation confirmed successfully!"}
 
 @router.post("/Modify-home-team-formation")
 async def modify_home_formation(match_id, username: str, home_team_players: List[str], home_team_numbers: List[int], token: str=Depends(oauth2_scheme)):
@@ -449,12 +465,23 @@ async def get_free_time_slot(match_id, token: str=Depends(oauth2_scheme)):
         return responses.JSONResponse(content={"message":"match_id is incorrect"},status_code=400)
     if time_slots==2:
         return responses.JSONResponse(content={"message":"match is already completed"},status_code=403)
+    if time_slots==3:
+        return responses.JSONResponse(content={"message":"match name is not confirmed"},status_code=403)
+    if time_slots==4:
+        return responses.JSONResponse(content={"message":"link is not confirmed"},status_code=403)
+    if time_slots==5:
+        return responses.JSONResponse(content={"message":"officials and amanagers are not confirmed"},status_code=403)
+    if time_slots==6:
+        return responses.JSONResponse(content={"message":"home formation is not confirmed"},status_code=403)
+    if time_slots==7:
+        return responses.JSONResponse(content={"message":"away formation is not confirmed"},status_code=403)
     return time_slots
 
 @router.post("/analyze-slot")
 async def analyze_time_slot(username: str, match_id, data_index: int, token: str=Depends(oauth2_scheme)):
     """
     Signal the server that a user started processing the time slot, if the match_id is incorrect, the match is completed or the time_slot is not free return error
+    This function should be called only after "get_free_time_slot"
     """
     if data_index<0 or data_index>28:
         return responses.JSONResponse(content={"message":f"data_index {data_index} is incorrect"},status_code=400)
@@ -465,7 +492,7 @@ async def analyze_time_slot(username: str, match_id, data_index: int, token: str
         return responses.JSONResponse(content={"message":"match is completed"},status_code=403)
     if result==3:
         return responses.JSONResponse(content={"message":"time_slot is being analyzed by another user"},status_code=400)
-    return {"message":"working username set successfully!"}
+    return result
 
 @router.post("/add-data")
 async def add_data(username: str, match_id, data_index: int, detail: str, token: str=Depends(oauth2_scheme)):#detail is Json?
@@ -484,11 +511,13 @@ async def add_data(username: str, match_id, data_index: int, detail: str, token:
     return {"message":"match data updated successfully!"}
 
 @router.get("/get-data")
-async def get_data(match_id, token: str=Depends(oauth2_scheme)):
+async def get_data(match_id, n: int, token: str=Depends(oauth2_scheme)):
     """
-    Get data of the match from db, if the match_id is incorrect return error
+    Get n data of the match from db, if n==0 get all data
     """
-    data=svc.get_data(match_id)
+    if n<0:
+        return responses.JSONResponse(content={"message":"invalid n value"},status_code=400)
+    data=svc.get_data(match_id, n)
     if not data:
         return responses.JSONResponse(content={"message":"match_id is incorrect"},status_code=400)
     return data
