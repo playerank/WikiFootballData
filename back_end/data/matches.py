@@ -24,7 +24,7 @@ class Match(mongoengine.Document):
     officials: List[str]=mongoengine.ListField()
     home_manager_id: ObjectId=mongoengine.ObjectIdField()
     away_manager_id: ObjectId=mongoengine.ObjectIdField()
-    officials_and_managers_are_confirmed=mongoengine.BooleanField(default=False)
+    officials_and_managers_are_confirmed: bool=mongoengine.BooleanField(default=False)
     home_team_formation: List[Match_Player]=mongoengine.EmbeddedDocumentListField(Match_Player)
     away_team_formation: List[Match_Player]=mongoengine.EmbeddedDocumentListField(Match_Player)
     home_formation_is_confirmed: bool=mongoengine.BooleanField(default=False)
