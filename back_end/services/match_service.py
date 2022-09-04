@@ -188,19 +188,21 @@ def get_match_info(match_id: ObjectId):
 def add_managers(match_id: ObjectId, home_team_manager: str, away_team_manager: str):
     """
     Add the managers to the match identified by match_id.
-    Return 1 if the match doesn't exist, 2 if values are already confirmed, 3 if home_team_manager is incorrect, 4 if away_team_manager is incorrect
+    Return 1 if the match doesn't exist, 2 if values are already confirmed, 3 if managers already added, 4 if home_team_manager is incorrect, 5 if away_team_manager is incorrect
     """
     match=get_match(match_id)
     if not match:
         return 1
     if match.officials_and_managers_are_confirmed:
         return 2
+    if match.home_manager_id or match.away_manager_id:
+        return 3
     home_manager_id=get_manager_id(home_team_manager)
     if not home_manager_id:
-        return 3
+        return 4
     away_manager_id=get_manager_id(away_team_manager)
     if not away_manager_id:
-        return 4
+        return 5
     match.home_manager_id=home_manager_id
     match.away_manager_id=away_manager_id
     match.journal.append(f"Managers added or changed to {home_team_manager} and {away_team_manager}")
@@ -209,20 +211,22 @@ def add_managers(match_id: ObjectId, home_team_manager: str, away_team_manager: 
 
 def add_officials(match_id: ObjectId, arbitrator: str, linesman1: str, linesman2: str, fourth_man: str):
     """
-    Add or change the officials to the match identified by match_id.
-    Return 1 if the match doesn't exist, 2 if values are already confirmed
+    Add the officials to the match identified by match_id.
+    Return 1 if the match doesn't exist, 2 if values are already confirmed and 3 if values already added
     """
     match=get_match(match_id)
     if not match:
         return 1
     if match.officials_and_managers_are_confirmed:
         return 2
+    if match.officials:
+        return 3
     match.officials=list()
     match.officials.append(arbitrator)
     match.officials.append(linesman1)
     match.officials.append(linesman2)
     match.officials.append(fourth_man)
-    match.journal.append(f"Officials added or changed to {arbitrator}, {linesman1}, {linesman2} and {fourth_man}")
+    match.journal.append(f"Officials added: {arbitrator}, {linesman1}, {linesman2} and {fourth_man}")
     match.save()
     return 0
 
@@ -241,23 +245,25 @@ def assess_off_and_man(match_id: ObjectId, username: str):
     match.save()
     return 0
 
-def modify_off_and_man(match_id: ObjectId, username: str, home_team_manager: str, away_team_manager: str, arbitrator: str, linesman1: str, linesman2: str, fourth_man: str):
+def change_off_and_man(check: bool, match_id: ObjectId, username: str, home_team_manager: str, away_team_manager: str, arbitrator: str, linesman1: str, linesman2: str, fourth_man: str):
     """
-    Modify and confirm definetely the officials and managers of the match identified by match_id.
-    Return 1 if match doesn't exist, 2 if home_team_manager is incorrect, 3 if away_team_manager is incorrect
+    Change or modify the officials and managers of the match identified by match_id.
+    Return 1 if match doesn't exist, 2 if values already confirmed, 3 if home_team_manager is incorrect, 4 if away_team_manager is incorrect
     """
     match=get_match(match_id)
     if not match:
         return 1
+    if check and match.officials_and_managers_are_confirmed:
+        return 2
     if home_team_manager!=" ":
         home_manager_id=get_manager_id(home_team_manager)
         if not home_manager_id:
-            return 2
+            return 3
         match.home_manager_id=home_manager_id
     if away_team_manager!=" ":
         away_manager_id=get_manager_id(away_team_manager)
         if not away_manager_id:
-            return 3
+            return 4
         match.away_manager_id=away_manager_id
     if arbitrator!=" ":
         match.officials[0]=arbitrator
@@ -267,15 +273,18 @@ def modify_off_and_man(match_id: ObjectId, username: str, home_team_manager: str
         match.officials[2]=linesman2
     if fourth_man!=" ":
         match.officials[3]=fourth_man
-    match.officials_and_managers_are_confirmed=True
-    match.journal.append(f"Officials and managers updated and confirmed by {username}")
+    if check:
+        match.journal.append("Officials and managers updated")
+    else:
+        match.officials_and_managers_are_confirmed=True
+        match.journal.append(f"Officials and managers updated and confirmed by {username}")
     match.save()
     return 0
 
 def add_team_formation(match_id: ObjectId, home: bool, player_names: List[str], player_numbers: List[int]):
     """
-    Add or change the requested formation to the match identified by match_id.
-    Return 1 if the match doesn't exist, 2 if the requested formation is confirmed, player_name if player_name is incorrect
+    Add the requested formation to the match identified by match_id.
+    Return 1 if the match doesn't exist, 2 if the requested formation is confirmed, 3 if formation already added, player_name if player_name is incorrect
     """
     match=get_match(match_id)
     if not match:
@@ -283,9 +292,13 @@ def add_team_formation(match_id: ObjectId, home: bool, player_names: List[str], 
     if home:
         if match.home_formation_is_confirmed:
             return 2
+        if match.home_team_formation:
+            return 3
     else:
         if match.away_formation_is_confirmed:
             return 2
+        if match.away_team_formation:
+            return 3
     i=0
     for p in player_names:
         player_id=get_player_id(p)
@@ -295,9 +308,9 @@ def add_team_formation(match_id: ObjectId, home: bool, player_names: List[str], 
         i+=1
     
     if home:
-        match.journal.append("Home team formation added or changed")
+        match.journal.append("Home team formation added")
     else:
-        match.journal.append("Away team formation added or changed")
+        match.journal.append("Away team formation added")
     match.save()
     return 0
 
@@ -322,10 +335,10 @@ def assess_formation(match_id: ObjectId, home: bool, username: str):
     match.save()
     return 0
 
-def modify_formation(match_id: ObjectId, home: bool, username: str, player_names: List[str], player_numbers: List[int]):
+def change_formation(check: bool, match_id: ObjectId, home: bool, username: str, player_names: List[str], player_numbers: List[int]):
     """
-    Modify and confirm definetely the requested formation of the match identified by match_id.
-    Return 1 if the match doesn't exist, 2 if the formation didn't exist
+    Change or modify the requested formation of the match identified by match_id.
+    Return 1 if the match doesn't exist, 2 if the formation didn't exist, 3 if formation already confirmed
     """
     match=get_match(match_id)
     if not match:
@@ -333,9 +346,13 @@ def modify_formation(match_id: ObjectId, home: bool, username: str, player_names
     if home:
         if not match.home_team_formation:
             return 2
+        if check and match.home_formation_is_confirmed:
+            return 3
     else:
         if not match.away_team_formation:
             return 2
+        if check and match.away_formation_is_confirmed:
+            return 3
     i=0
     for p in player_names:
         if p=="":
@@ -362,11 +379,17 @@ def modify_formation(match_id: ObjectId, home: bool, username: str, player_names
         i+=1
     #outside the for
     if home:
-        match.home_formation_is_confirmed=True
-        match.journal.append(f"Home team formation updated and confirmed by {username}")
+        if check:
+            match.journal.append("Home team formation updated")
+        else:
+            match.home_formation_is_confirmed=True
+            match.journal.append(f"Home team formation updated and confirmed by {username}")
     else:
-        match.away_formation_is_confirmed=True
-        match.journal.append(f"Away team formation updated and confirmed by {username}")
+        if check:
+            match.journal.append("Away team formation updated")
+        else:
+            match.away_formation_is_confirmed=True
+            match.journal.append(f"Away team formation updated and confirmed by {username}")
     match.save()
     return 0
 
