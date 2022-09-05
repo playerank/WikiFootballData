@@ -167,7 +167,9 @@ async def assess_officials_and_managers(match_id, username: str, token: str=Depe
     if result==1:
         return responses.JSONResponse(content={"message":"match_id is incorrect"},status_code=400)
     if result==2:
-        return responses.JSONResponse(content={"message":"values already confirmed"},status_code=400)
+        return responses.JSONResponse(content={"message":"values already confirmed"},status_code=403)
+    if result==3:
+        return responses.JSONResponse(content={"message":"values not added yet"}, status_code=403)
     return {"message":"values confirmed successfully!"}
 
 @router.post("/modify-officials-managers")
@@ -182,6 +184,8 @@ async def modify_officials_and_managers(match_id, username: str, home_team_manag
     result=svc.change_off_and_man(False, match_id, username, home_team_manager, away_team_manager, arbitrator, linesman1, linesman2, fourth_man)
     if result==1:
         return responses.JSONResponse(content={"message":"match_id is incorrect"},status_code=400)
+    if result==2:
+        return responses.JSONResponse(content={"message":"analysis of the match already started"},status_code=403)
     if result==3:
         return responses.JSONResponse(content={"message":f"manager {home_team_manager} is incorrect or has not yet been saved in db"},status_code=400)
     if result==4:
@@ -299,7 +303,9 @@ async def assess_home_formation(match_id, username: str, token: str=Depends(oaut
     if result==1:
         return responses.JSONResponse(content={"message":"match_id is incorrect"},status_code=400)
     if result==2:
-        return responses.JSONResponse(content={"message":"formation already confirmed"},status_code=403)
+        return responses.JSONResponse(content={"message":"Home formation already confirmed"},status_code=403)
+    if result==3:
+        return responses.JSONResponse(content={"message":"Home formation not added yet"},status_code=403)
     return {"message":"home formation confirmed successfully!"}
 
 @router.post("/assess-away-formation")
@@ -315,7 +321,9 @@ async def assess_away_formation(match_id, username: str, token: str=Depends(oaut
     if result==1:
         return responses.JSONResponse(content={"message":"match_id is incorrect"},status_code=400)
     if result==2:
-        return responses.JSONResponse(content={"message":"formation already confirmed"},status_code=403)
+        return responses.JSONResponse(content={"message":"Away formation already confirmed"},status_code=403)
+    if result==3:
+        return responses.JSONResponse(content={"message":"Away formation not added yet"},status_code=403)
     return {"message":"away formation confirmed successfully!"}
 
 @router.post("/modify-home-team-formation")
@@ -341,6 +349,8 @@ async def modify_home_formation(match_id, username: str, home_team_players: List
         return responses.JSONResponse(content={"message":"match_id is incorrect"},status_code=400)
     if result==2:
         return responses.JSONResponse(content={"message":"Home formation is absent, use the function add-home-team-formation"},status_code=400)
+    if result==3:
+        return responses.JSONResponse(content={"message":"analysis of the match already started"},status_code=403)
     return {"message":"Home formation updated and confirmed successfully!"}
 
 @router.post("/modify-away-team-formation")
@@ -366,6 +376,8 @@ async def modify_away_formation(match_id, username: str, away_team_players: List
         return responses.JSONResponse(content={"message":"match_id is incorrect"},status_code=400)
     if result==2:
         return responses.JSONResponse(content={"message":"Away formation is absent, use the function add-away-team-formation"},status_code=400)
+    if result==3:
+        return responses.JSONResponse(content={"message":"analysis of the match already started"},status_code=403)
     return {"message":"Away formation updated and confirmed successfully!"}
 
 @router.post("/change-name")
@@ -405,8 +417,11 @@ async def modify_name(username: str, match_id, home_team: str, away_team: str, s
     role=verify_role(username)
     if role!="A" and role!="E":
         return responses.JSONResponse(content={"message":"Forbidden Operation"},status_code=403)
-    if svc.change_name(False, username, match_id, home_team, away_team, season, competition_name, round, date, link, extended_time, penalty)==1:
+    result=svc.change_name(False, username, match_id, home_team, away_team, season, competition_name, round, date, link, extended_time, penalty)
+    if result==1:
         return responses.JSONResponse(content={"message":"match_id is incorrect"},status_code=400)
+    if result==3:
+        return responses.JSONResponse(content={"message":"analysis of the match already started"},status_code=403)
     return {"message":"Match name updated successfully!"}
 
 @router.post("/change-link")
@@ -446,8 +461,11 @@ async def modify_link(username: str,match_id, link: HttpUrl, token: str=Depends(
     role=verify_role(username)
     if role!="A" and role!="E":
         return responses.JSONResponse(content={"message":"Forbidden Operation"},status_code=403)
-    if svc.change_link(False, username, match_id, link)==1:
+    result=svc.change_link(False, username, match_id, link)
+    if result==1:
         return responses.JSONResponse(content={"message":"match_id is incorrect"},status_code=400)
+    if result==3:
+        return responses.JSONResponse(content={"message":"analysis of the match already started"},status_code=403)
     return {"message":"link updated and confirmed successfully!"}
 
 @router.get("/get-report")
@@ -497,7 +515,9 @@ async def assess_match_report(username: str, match_id, token: str=Depends(oauth2
     if result==1:
         return responses.JSONResponse(content={"message":"match_id is incorrect"},status_code=400)
     if result==2:
-        return responses.JSONResponse(content={"message":"Report already confirmed"},status_code=400)
+        return responses.JSONResponse(content={"message":"Report already confirmed"},status_code=403)
+    if result==3:
+        return responses.JSONResponse(content={"message":"Report not added yet"},status_code=403)
     return {"message":"Report confirmed successfully!"}
 
 @router.post("/modify-report")
@@ -559,6 +579,8 @@ async def analyze_time_slot(username: str, match_id, data_index: int, token: str
     if result==2:
         return responses.JSONResponse(content={"message":"match is completed"},status_code=403)
     if result==3:
+        return responses.JSONResponse(content={"message":"match values haven't been confirmed yet"},status_code=403)
+    if result==4:
         return responses.JSONResponse(content={"message":"time_slot is being analyzed by another user"},status_code=400)
     #Trasformare in file json con nome intuitivo
     return result
@@ -567,6 +589,7 @@ async def analyze_time_slot(username: str, match_id, data_index: int, token: str
 async def add_data(username: str, match_id, data_index: int, detail: str, token: str=Depends(oauth2_scheme)):#detail is Json?
     """
     Add the result of the analysis to the db, if the match_id is incorrect return error
+    This function should be called only after analyze_time_slot
     """
     if data_index<0 or data_index>28:
         return responses.JSONResponse(content={"message":f"data_index {data_index} is incorrect"},status_code=400)
@@ -576,6 +599,8 @@ async def add_data(username: str, match_id, data_index: int, detail: str, token:
     if result==2:
         return responses.JSONResponse(content={"message":"match is completed"},status_code=403)
     if result==3:
+        return responses.JSONResponse(content={"message":"match values haven't been confirmed yet"},status_code=403)
+    if result==4:
         return responses.JSONResponse(content={"message":"time_slot is being analyzed by another user"},status_code=400)
     return {"message":"match data updated successfully!"}
 
