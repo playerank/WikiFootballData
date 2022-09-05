@@ -233,13 +233,15 @@ def add_officials(match_id: ObjectId, arbitrator: str, linesman1: str, linesman2
 def assess_off_and_man(match_id: ObjectId, username: str):
     """
     Confirm definetely values of the match identified by match_id.
-    Return 1 if the match doesn't exist, 2 if values are already confirmed
+    Return 1 if the match doesn't exist, 2 if values are already confirmed, 3 if values have not been added yet
     """
     match=get_match(match_id)
     if not match:
         return 1
     if match.officials_and_managers_are_confirmed:
         return 2
+    if match.officials==None or match.home_team_formation==None or match.away_team_formation==None:
+        return 3
     match.officials_and_managers_are_confirmed=True
     match.journal.append(f"Officials and Managers confirmed by {username}")
     match.save()
@@ -248,12 +250,14 @@ def assess_off_and_man(match_id: ObjectId, username: str):
 def change_off_and_man(check: bool, match_id: ObjectId, username: str, home_team_manager: str, away_team_manager: str, arbitrator: str, linesman1: str, linesman2: str, fourth_man: str):
     """
     Change or modify the officials and managers of the match identified by match_id.
-    Return 1 if match doesn't exist, 2 if values already confirmed, 3 if home_team_manager is incorrect, 4 if away_team_manager is incorrect
+    Return 1 if match doesn't exist, 2 if (check and values are already confirmed) or if (not check and analysis of the match already started), 3 if home_team_manager is incorrect, 4 if away_team_manager is incorrect
     """
     match=get_match(match_id)
     if not match:
         return 1
     if check and match.officials_and_managers_are_confirmed:
+        return 2
+    if check==False and match.started_working:
         return 2
     if home_team_manager!=" ":
         home_manager_id=get_manager_id(home_team_manager)
@@ -317,7 +321,7 @@ def add_team_formation(match_id: ObjectId, home: bool, player_names: List[str], 
 def assess_formation(match_id: ObjectId, home: bool, username: str):
     """
     Confirm definetely the requested formation of the match identified by match_id.
-    Return 1 if the match doesn't exist, 2 if the requested formation is already confirmed
+    Return 1 if the match doesn't exist, 2 if the requested formation is already confirmed, 3 if formation haven't been added yet
     """
     match=get_match(match_id)
     if not match:
@@ -325,11 +329,15 @@ def assess_formation(match_id: ObjectId, home: bool, username: str):
     if home:
         if match.home_formation_is_confirmed:
             return 2
+        if not match.home_team_formation:
+            return 3
         match.home_formation_is_confirmed=True
         match.journal.append(f"Home formation confirmed by {username}")
     else:
         if match.away_formation_is_confirmed:
             return 2
+        if not match.away_team_formation:
+            return 3
         match.away_formation_is_confirmed=True
         match.journal.append(f"Away formation confirmed by {username}")
     match.save()
@@ -338,11 +346,13 @@ def assess_formation(match_id: ObjectId, home: bool, username: str):
 def change_formation(check: bool, match_id: ObjectId, home: bool, username: str, player_names: List[str], player_numbers: List[int]):
     """
     Change or modify the requested formation of the match identified by match_id.
-    Return 1 if the match doesn't exist, 2 if the formation didn't exist, 3 if formation already confirmed
+    Return 1 if the match doesn't exist, 2 if the formation didn't exist, 3 if (check and formation already confirmed) or if (not check and analysis of the match already started)
     """
     match=get_match(match_id)
     if not match:
         return 1
+    if check==False and match.started_working:
+        return 3
     if home:
         if not match.home_team_formation:
             return 2
@@ -396,13 +406,15 @@ def change_formation(check: bool, match_id: ObjectId, home: bool, username: str,
 def change_name(check: bool, username: str, match_id, home_team: str, away_team: str, season: str, competition_name: str, round: str, date: datetime, link: HttpUrl, extended_time: bool, penalty: bool):
     """
     Change or modify the match name(depends of the value of check).
-    Return 1 if the match doesn't exist, 2 if the match_name is already confirmed
+    Return 1 if the match doesn't exist, 2 if the match_name is already confirmed, 3 if analysis of the match already started
     """
     match=get_match(match_id)
     if not match:
         return 1
     if check and match.is_confirmed:
-            return 2
+        return 2
+    if check==False and match.started_working:
+        return 3
     if match.extended_time!=extended_time or match.penalty!=penalty:
         match.extended_time=extended_time
         match.penalty=penalty
@@ -451,13 +463,15 @@ def assess_name(username: str, match_id: ObjectId):
 def change_link(check: bool, username: str, match_id: ObjectId, new_link: HttpUrl):
     """
     Change the link of the match identified by match_id, if check==False confirm it definetely.
-    Return 1 if the match doesn't exist, 2 if the match link is already confirmed
+    Return 1 if the match doesn't exist, 2 if the match link is already confirmed, 3 if analysis of the match already started
     """
     match=get_match(match_id)
     if not match:
         return 1
     if check and match.link_is_confirmed:
         return 2
+    if check==False and match.started_working:
+        return 3
     match.link=new_link
     if check:
         match.journal.append(f"Match link updated to {new_link}")
@@ -528,13 +542,15 @@ def change_match_report(check: bool, username: str, match_id: ObjectId, new_repo
 def assess_match_report(username: str, match_id: ObjectId):
     """
     Confirms definitely the match report.
-    Return 1 if the match doesn't exist, 2 if the match report is already confirmed
+    Return 1 if the match doesn't exist, 2 if the match report is already confirmed, 3 if report haven't been added yet
     """
     match=get_match(match_id)
     if not match:
         return 1
     if match.report_is_confirmed:
         return 2
+    if not match.report:
+        return 3
     match.report_is_confirmed=True
     match.journal.append(f"Match report has been confirmed by {username}")
     match.save()
@@ -581,16 +597,19 @@ def get_free_time_slot(match_id: ObjectId):
 def analyze_time_slot(username: str, match_id: ObjectId, data_index: int):
     """
     Signal in the specified data that the user identified by username is analyzing it.
-    Return 1 if the match doesn't exist, 2 if the match is already completed, 3 if the specified data is being analyzed or was analyzed by another user
+    Return 1 if the match doesn't exist, 2 if the match is already completed, 3 if match values are not confirmed, 4 if the specified data is being analyzed or was analyzed by another user
     """
     match=get_match(match_id)
     if not match:
         return 1
     if match.is_completed:
         return 2
-    if match.data[data_index].working!=None or match.data[data_index].author!=None:
+    if match.is_confirmed==False or match.officials_and_managers_are_confirmed==False or match.home_formation_is_confirmed==False or match.away_formation_is_confirmed==False or match.link_is_confirmed==False:
         return 3
+    if match.data[data_index].working!=None or match.data[data_index].author!=None:
+        return 4
     match.data[data_index].working=username
+    match.started_working=True
     match.journal.append(f"User {username} started working at time slot {match.data[data_index].time_slot}")
     match.save()
     return create_info_dict(match)
@@ -598,15 +617,17 @@ def analyze_time_slot(username: str, match_id: ObjectId, data_index: int):
 def add_data(username: str, match_id: ObjectId, data_index: int, detail: str):#Json?:
     """
     Add the detail of the specified data.
-    Return 1 if the match doesn't exist, 2 if the match is already completed, 3 if the specified data is being analyzed by another user
+    Return 1 if the match doesn't exist, 2 if the match is already completed, 3 if match values are not confirmed, 4 if the specified data is being analyzed by another user
     """
     match=get_match(match_id)
     if not match:
         return 1
     if match.is_completed:
         return 2
+    if not match.started_working:
+        return 3
     if match.data[data_index].working!=username:
-        return 3 
+        return 4
     match.data[data_index].detail=detail
     match.journal.append(f"User {username} ended working at time slot {match.data[data_index].time_slot}")
     match.save()
