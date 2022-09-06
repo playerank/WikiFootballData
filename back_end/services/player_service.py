@@ -46,12 +46,18 @@ def add_player(player_name: str, date_of_birth: datetime, nationality: str, curr
         return 1
     if national_team_shirt_number==0 or national_team_shirt_number<=0:
         national_team_shirt_number=-1
-    team_id=get_team_id(current_team)
-    if not team_id:
-        return 2
-    national_team_id=get_team_id(nationality)
-    if not national_team_id:
-        return 3
+    if current_team=="free agent" or current_team=="retired":
+        team_id=None
+    else:
+        team_id=get_team_id(current_team)
+        if not team_id:
+            return 2
+    if nationality=="free agent" or nationality=="retired":
+        national_team_id=None
+    else:
+        national_team_id=get_team_id(nationality)
+        if not national_team_id:
+            return 3
     e_player=get_player(player_name, date_of_birth)
     if e_player:
         return 3
@@ -113,9 +119,12 @@ def update_player_conditions(player_name: str, date_of_birth: datetime, new_team
     if new_club_shirt_number<=0 and (new_team!="free agent" or (new_team!=" " and e_player.team_id!=get_team_id("free agent"))):
         return 2
     if new_team!=" ":
-        team_id=get_team_id(new_team)
-        if not team_id:
-            return 3
+        if new_team=="free agent" or new_team=="retired":
+            team_id=None
+        else:
+            team_id=get_team_id(new_team)
+            if not team_id:
+                return 3
         e_player.team_id=team_id
     if new_national_team_shirt_number>0:
         e_player.national_team_shirt_number=new_national_team_shirt_number
