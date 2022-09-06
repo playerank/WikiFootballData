@@ -23,7 +23,8 @@ async def get_player_list(n: int):
 @router.post("/add")
 async def add_player(player_name: str, date_of_birth_str: str, nationality: str, current_team: str, club_shirt_number: int, national_team_shirt_number: int):
     """
-    Add player to the collection, if player already exists return error
+    Add player to the collection, if the player doesn't play for the national team as national_team_shirt_number insert 0.
+    If player already exists return error
     """
     try:
         date_of_birth=datetime.strptime(date_of_birth_str, '%d/%m/%Y')
@@ -78,7 +79,7 @@ async def change_player(player_name: str, date_of_birth_str: str, new_player_nam
 @router.post("/assess")
 async def assess_player(username: str, player_name: str, date_of_birth_str: str):
     """
-    Confirm definetely the player parameter, if player inexistent or already confirmed definetely return error
+    Confirm definetely the player parameter, if player inexistent or already confirmed definetely return error.
     Only administrators or editors can call this function
     """
     try:
@@ -135,7 +136,7 @@ async def modify_player(username: str, player_name: str, date_of_birth_str: str,
 @router.post("/update")
 async def update_player_conditions(player_name: str, date_of_birth_str: str, new_team: str, new_club_shirt_number: int, new_national_team_shirt_number: int):
     """
-    Update the current player conditions that are the team, the club shirt number and the national team shirt number.
+    Update the current player conditions that are the team, the club shirt number and the national team shirt number, if the player doesn't play for the national team as national_team_shirt_number insert 0.
     if the player doesn't exist or the club shirt number is an invalid value return error
     """
     try:
