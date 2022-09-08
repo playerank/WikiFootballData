@@ -31,7 +31,7 @@ class Match(mongoengine.Document):
     away_formation_is_confirmed: bool=mongoengine.BooleanField(default=False)
     additional_attributes: List=mongoengine.ListField()
     working: List[str]=mongoengine.ListField()
-    link: HttpUrl=mongoengine.URLField(required=True)
+    link: HttpUrl=mongoengine.URLField()
     link_is_confirmed: bool=mongoengine.BooleanField(default=False)
     report: str=mongoengine.StringField()
     report_is_confirmed: bool=mongoengine.BooleanField(default=False)
