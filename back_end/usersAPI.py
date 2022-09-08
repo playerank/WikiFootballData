@@ -38,7 +38,7 @@ async def sign_up(username: str, password: str):
 async def login(form_data: OAuth2PasswordRequestForm= Depends()):
     """
     Log in a new User, if username doesen't exist or password is incorrect return error.
-    FUNCTION CALLED AUTOMATICALLY BY THE SECURITY SYSTEM DO NOT CALL IT
+    IF YOU ARE USING THE FASTAPI DOCS THEN THIS FUNCTION IS CALLED AUTOMATICALLY BY THE SECURITY FUNCTION SO USE THAT, NOT THIS
     """
     username=form_data.username
     password=form_data.password
@@ -49,7 +49,7 @@ async def login(form_data: OAuth2PasswordRequestForm= Depends()):
         raise HTTPException(status_code=400, detail="password is incorrect")
     if result=="L":
         raise HTTPException(status_code=400, detail="user already online")
-    access_token=create_access_token({"sub":username}, timedelta(minutes=30))
+    access_token=create_access_token({"sub":username}, timedelta(minutes=60))
     return {"access_token": access_token, "token_type":"bearer"}
 
 

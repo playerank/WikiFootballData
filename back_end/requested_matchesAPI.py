@@ -1,4 +1,5 @@
-from fastapi import APIRouter, responses
+from fastapi import APIRouter, responses, Depends
+from usersAPI import oauth2_scheme
 import services.requested_match_service as svc
 
 router = APIRouter(
@@ -24,3 +25,13 @@ async def add_requested_match(home_team: str, away_team: str,competition_name: s
     if not svc.add_r_match(home_team,away_team,competition_name,season):
         return responses.JSONResponse(content={"message":"match already exists"},status_code=400)
     return {"message":"match added succesfully!"}
+
+@router.post("/remove")
+async def remove_requested_match(home_team: str, away_team: str,competition_name: str, season: str, token: str=Depends(oauth2_scheme)):
+    """
+    Remove the match from the requested match list.
+    Should be called when an user decide to add the match to the match list
+    """
+    if not svc.remove_r_match(home_team,away_team,competition_name,season):
+        return {"message":"match already removed!"}
+    return {"message":"match removed succesfully!"}

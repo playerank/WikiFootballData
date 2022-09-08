@@ -56,12 +56,13 @@ async def get_N(username: str, token: str=Depends(usersAPI.oauth2_scheme)):
     """
     if verify_role(username)!="A":
         return responses.JSONResponse(content={"message":"Forbidden Operation"},status_code=403)
+    global n
     return n
 
 @app.post("/change-N")
 async def change_N(username: str, new_value: int, token: str=Depends(usersAPI.oauth2_scheme)):
     """
-    Change the value of N, it's not retroactive, if new_value is incorrect return error
+    Change the value of N (it's not retroactive), if new_value is incorrect return error
     Only administrators can call this function
     """
     if verify_role(username)!="A":

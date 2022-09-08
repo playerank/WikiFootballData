@@ -424,6 +424,19 @@ async def modify_name(username: str, match_id, home_team: str, away_team: str, s
         return responses.JSONResponse(content={"message":"analysis of the match already started"},status_code=403)
     return {"message":"Match name updated successfully!"}
 
+@router.post("/add-link")
+async def add_link(match_id, link: HttpUrl):
+    """
+    Add the link to the match identified by match_id.
+    if match_id is incorrect return error
+    """
+    result=svc.add_link(match_id, link)
+    if result==1:
+        return responses.JSONResponse(content={"message":"match_id is incorrect"},status_code=400)
+    if result==2:
+        return responses.JSONResponse(content={"message":"link of the match already added"},status_code=403)
+    return {"message":"Link added successfully!"}
+
 @router.post("/change-link")
 async def change_match_link(match_id, new_link: HttpUrl, token: str=Depends(oauth2_scheme)):
     """
