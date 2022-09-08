@@ -18,7 +18,7 @@ def get_requested_matches(n: int) -> List[Requested_match]:
 def add_r_match(home_team: str,away_team: str,competition_name: str,season: str) -> bool:
     """
     Create and add to the db a requested_match.
-    Return False if already exists a requested_match with the same value
+    Return False if already exists a requested_match with the same values
     """
     existing_r_match: Requested_match=Requested_match.objects() \
         .filter(home_team=home_team) \
@@ -36,4 +36,20 @@ def add_r_match(home_team: str,away_team: str,competition_name: str,season: str)
     r_match.competition_name=competition_name
     r_match.season_name=season
     r_match.save()
+    return True
+
+def remove_r_match(home_team: str,away_team: str,competition_name: str,season: str) -> bool:
+    """
+    Remove from the db the requested match.
+    Return False if doesn't exist a requested match with the same values
+    """
+    existing_r_match: Requested_match=Requested_match.objects() \
+        .filter(home_team=home_team) \
+        .filter(away_team=away_team) \
+        .filter(competition_name=competition_name) \
+        .filter(season_name=season) \
+        .first()
+    if not existing_r_match:
+        return False
+    existing_r_match.delete()
     return True

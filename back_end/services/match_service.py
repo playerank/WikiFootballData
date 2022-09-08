@@ -105,8 +105,12 @@ def add_match(username: str, home_team: str, away_team: str, season: str, compet
     away_team_id=get_team_id(away_team)
     if not away_team_id:
         return 3
-    #il link dovrebbe identificare univocamente un match
-    e_match=Match.objects(link=link).only('id').first()
+    e_match=Match.objects() \
+        .filter(home_team=home_team) \
+        .filter(away_team=away_team) \
+        .filter(competition_name=competition_name) \
+        .filter(date=date) \
+        .only('id').first()
     if e_match:
         return 4
     match=Match()
@@ -117,7 +121,8 @@ def add_match(username: str, home_team: str, away_team: str, season: str, compet
     match.competition_id=competition_id
     match.round=round
     match.date_utc=date
-    match.link=link
+    if link!=" " or link!="":
+        match.link=link
     match.extended_time=extended_time
     match.penalty=penalty
     match.create_data
@@ -457,6 +462,21 @@ def assess_name(username: str, match_id: ObjectId):
         return 2
     match.is_confirmed=True
     match.journal.append(f"Match name has been confirmed by {username}")
+    match.save()
+    return 0
+
+def add_link(match_id: ObjectId, link: HttpUrl):
+    """
+    Add the link to the match identified by match_id.
+    Return 1 if the match doesn't exist, 2 if the match link has been already added
+    """
+    match=get_match(match_id)
+    if not match:
+        return 1
+    if match.link:
+        return 2
+    match.link=link
+    match.journal.append(f"Match link added")
     match.save()
     return 0
 
