@@ -25,7 +25,7 @@ async def get_completed_match_list(n: int):
 @router.get("/completed-matches/data")
 async def get_completed_match_data(match_id):
     """
-    Get completed match data from db, if the match_id is incorrect return error.
+    Get completed match data from db, if match_id is incorrect or match is not completedreturn error.
     Even non-user can call this function
     """
     c_data=svc.get_completed_match_data(match_id)
@@ -59,7 +59,8 @@ async def get_not_completed_match_list(n: int, token: str=Depends(oauth2_scheme)
 @router.get("/get-id")
 async def get_match_id(home_team: str, away_team: str, season: str, competition_name: str, token: str=Depends(oauth2_scheme)):
     """
-    Get the id of the match identified by parameters
+    Get the id of the match identified by parameters.
+    if competition name is incorrect or home team is incorrect or away team is incorrect or doesn't exist a match with that value return error
     """
     id=svc.get_match_id(home_team,away_team,season,competition_name)
     if id==1:
@@ -75,7 +76,8 @@ async def get_match_id(home_team: str, away_team: str, season: str, competition_
 @router.post("/add")
 async def add_match(username: str, home_team: str, away_team: str, season: str, competition_name: str, round: str, date_str: str, link: HttpUrl, extended_time: bool, penalty: bool, token: str=Depends(oauth2_scheme)):
     """
-    Add a new match to db
+    Add a new match to db.
+    if date_str is in the wrong format or competition name is incorrect or home team is incorrect or away team is incorrect or exists a match with the same values return error
     """
     try:
         date=datetime.strptime(date_str, '%d/%m/%Y')
@@ -96,12 +98,13 @@ async def add_match(username: str, home_team: str, away_team: str, season: str, 
         return responses.JSONResponse(content={"message":"match already exists"},status_code=400)
     return {"message":"match added successfully!"}
 
-@router.post("/get-info")
-async def get_match_info(match_id, token: str=Depends(oauth2_scheme)):
+@router.post("/get-complete-info")
+async def get_match_complete_info(match_id, token: str=Depends(oauth2_scheme)):
     """
-    Return the info, of the requested match, in dict format
+    Return the complete info, of the requested match, in dict format.
+    if match id is incorrect return error
     """
-    info=svc.get_match_info(match_id)
+    info=svc.get_match_complete_info(match_id)
     if not info:
         return responses.JSONResponse(content={"message":"match_id is incorrect"},status_code=400)
     return info
@@ -380,44 +383,67 @@ async def modify_away_formation(match_id, username: str, away_team_players: List
         return responses.JSONResponse(content={"message":"analysis of the match already started"},status_code=403)
     return {"message":"Away formation updated and confirmed successfully!"}
 
-@router.post("/change-name")
-async def change_match_name(match_id, home_team: str, away_team: str, season: str, competition_name: str, round: str, date: datetime, link: HttpUrl, extended_time: bool, penalty: bool):
+@router.post("/change-info")
+async def change_match_info(match_id, home_team: str, away_team: str, season: str, competition_name: str, round: str, date_str: str, extended_time: bool, penalty: bool):
     """
-    Change the name of the match, if the match_id is incorrect or match is already confirmed return error
+    Change the info of the match, if the match_id is incorrect or match is already confirmed return error
     """
-    result=svc.change_name(True, None, match_id, home_team, away_team, season, competition_name, round, date, link, extended_time, penalty)
+    if date_str!="" or date_str!=" ":
+        try:
+            date=datetime.strptime(date_str, '%d/%m/%Y')
+        except ValueError:
+            try:
+                date=datetime.strptime(date_str, '%d/%m/%y')
+            except:
+                return responses.JSONResponse(content={"message":f"date {date_str} is in a wrong format"},status_code=400)
+    else:
+        date=None
+    
+    result=svc.change_info(True, None, match_id, home_team, away_team, season, competition_name, round, date, extended_time, penalty)
     if result==1:
         return responses.JSONResponse(content={"message":"match_id is incorrect"},status_code=400)
     if result==2:
         return responses.JSONResponse(content={"message":"match already confirmed"},status_code=403)
     return {"message":"Match name updated successfully!"}
 
-@router.post("/assess-name")
-async def assess_name(username: str, match_id, token: str=Depends(oauth2_scheme)):
+@router.post("/assess-info")
+async def assess_info(username: str, match_id, token: str=Depends(oauth2_scheme)):
     """
-    Confirm definitely the match name in the db, if the match_id is incorrect or match_name already confirmed return error
+    Confirm definitely the match info in the db, if the match_id is incorrect or match_name already confirmed return error
     Only administrators or editors can call this function
     """
     role=verify_role(username)
     if role!="A" and role!="E":
         return responses.JSONResponse(content={"message":"Forbidden Operation"},status_code=403)
-    result=svc.assess_name(username, match_id)
+    result=svc.assess_info(username, match_id)
     if result==1:
         return responses.JSONResponse(content={"message":"match_id is incorrect"},status_code=400)
     if result==2:
         return responses.JSONResponse(content={"message":"match_name already confirmed"},status_code=400)
     return {"message":"match_name confirmed successfully!"}
 
-@router.post("/modify-name")
-async def modify_name(username: str, match_id, home_team: str, away_team: str, season: str, competition_name: str, round: str, date: datetime, link: HttpUrl, extended_time: bool, penalty: bool):
+@router.post("/modify-info")
+async def modify_info(username: str, match_id, home_team: str, away_team: str, season: str, competition_name: str, round: str, date_str: str, extended_time: bool, penalty: bool):
     """
-    Modify and confirm definitely the match name in the db, if the match_name is incorrect return error
+    Modify and confirm definitely the match info in the db, if the match_name is incorrect return error
     Only administrators or editors can call this function
     """
     role=verify_role(username)
     if role!="A" and role!="E":
         return responses.JSONResponse(content={"message":"Forbidden Operation"},status_code=403)
-    result=svc.change_name(False, username, match_id, home_team, away_team, season, competition_name, round, date, link, extended_time, penalty)
+    
+    if date_str!="" or date_str!=" ":
+        try:
+            date=datetime.strptime(date_str, '%d/%m/%Y')
+        except ValueError:
+            try:
+                date=datetime.strptime(date_str, '%d/%m/%y')
+            except:
+                return responses.JSONResponse(content={"message":f"date {date_str} is in a wrong format"},status_code=400)
+    else:
+        date=None
+    
+    result=svc.change_info(False, username, match_id, home_team, away_team, season, competition_name, round, date, extended_time, penalty)
     if result==1:
         return responses.JSONResponse(content={"message":"match_id is incorrect"},status_code=400)
     if result==3:
