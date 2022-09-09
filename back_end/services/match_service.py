@@ -129,9 +129,9 @@ def add_match(username: str, home_team: str, away_team: str, season: str, compet
     match.save()
     return 0
 
-def get_match_info(match_id: ObjectId):
+def get_match_complete_info(match_id: ObjectId):
     """
-    Return the info of the match identified by match_id
+    Return the complete info of the match identified by match_id
     """
     m=get_match(match_id)
     if not m:
@@ -408,9 +408,9 @@ def change_formation(check: bool, match_id: ObjectId, home: bool, username: str,
     match.save()
     return 0
 
-def change_name(check: bool, username: str, match_id, home_team: str, away_team: str, season: str, competition_name: str, round: str, date: datetime, link: HttpUrl, extended_time: bool, penalty: bool):
+def change_info(check: bool, username: str, match_id, home_team: str, away_team: str, season: str, competition_name: str, round: str, date: datetime, link: HttpUrl, extended_time: bool, penalty: bool):
     """
-    Change or modify the match name(depends of the value of check).
+    Change or modify the match info (depends of the value of check).
     Return 1 if the match doesn't exist, 2 if the match_name is already confirmed, 3 if analysis of the match already started
     """
     match=get_match(match_id)
@@ -428,8 +428,8 @@ def change_name(check: bool, username: str, match_id, home_team: str, away_team:
         match.season=season
     if round!=" ":
         match.round=round
-    match.date_utc=date
-    match.link=link
+    if date:
+        match.date_utc=date
     if competition_name!=" ":
         competition_id=get_competition_id(competition_name)
         if competition_id:
@@ -450,9 +450,9 @@ def change_name(check: bool, username: str, match_id, home_team: str, away_team:
     match.save()
     return 0
 
-def assess_name(username: str, match_id: ObjectId):
+def assess_info(username: str, match_id: ObjectId):
     """
-    Confirms definitely the match name.
+    Confirms definitely the match info.
     Return 1 if the match doesn't exist, 2 if the match name is already confirmed
     """
     match=get_match(match_id)
