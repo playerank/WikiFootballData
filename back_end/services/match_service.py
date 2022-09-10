@@ -634,7 +634,7 @@ def analyze_time_slot(username: str, match_id: ObjectId, data_index: int):
     match.save()
     return create_info_dict(match)
 
-def add_data(username: str, match_id: ObjectId, data_index: int, detail: str):#Json?:
+def add_detail(username: str, match_id: ObjectId, data_index: int, detail: str):#Json?:
     """
     Add the detail of the specified data.
     Return 1 if the match doesn't exist, 2 if the match is already completed, 3 if match values are not confirmed, 4 if the specified data is being analyzed by another user
@@ -653,41 +653,39 @@ def add_data(username: str, match_id: ObjectId, data_index: int, detail: str):#J
     match.save()
     return 0
 
-def get_data(match_id: ObjectId, n: int) -> List[Analysis] | None:
+def get_analysis(match_id: ObjectId, n: int) -> List[Analysis] | None:
     """
-    Return a list of n data of the match identified by match_id
+    Return a list of n analysis of the match identified by match_id
     """
     match: Match=Match.objects(id=match_id).only('data').first()
     if not match:
         return None
     if n==0 or n>=30:
         return match.data
-    data_list=list()
+    analysis_list=list()
     for d in match.data:
         if n==0: break
-        data_list.append(d)
+        analysis_list.append(d)
         n-=1
-    return data_list
+    return analysis_list
 
-def get_elaborated_data(match_id: ObjectId, n: int) -> List[Analysis] | None:
+def get_elaborated_analysis(match_id: ObjectId, n: int):
     """
-    Return the list of n elaborated data of the match identified by match_id
+    Return the list of n elaborated analyis of the match identified by match_id
     """
     match: Match=Match.objects(id=match_id).only('data').first()
     if not match:
-        return None
-    if match.is_completed:
-        return match.data
-    elaborated_data: List[Analysis]=list()
+        return 1
+    elaborated_analysis: List[Analysis]=list()
     if n==0:
         n=30
     for d in match.data:
         if d.author!=None:
-            elaborated_data.append(d)
+            elaborated_analysis.append(d)
             if n==0:
                 break
             n-=1
-    return elaborated_data
+    return elaborated_analysis
 
 def create_review(username: str, match_id: ObjectId, data_index: int, judgement: bool):
     """
@@ -729,10 +727,10 @@ def create_review(username: str, match_id: ObjectId, data_index: int, judgement:
     review.save()
     return 0
 
-def validate_data(username: str, match_id: ObjectId, data_index: int, judgement: bool):
+def validate_analysis(username: str, match_id: ObjectId, data_index: int, judgement: bool):
     """
-    Add a judgement to the specified data.
-    If the data reach n endorsements it will be added to the event collection and it will start a check to all data, if all data are completed(reached n endorsements), the whole match will be considered completed
+    Add a judgement to the specified analysis.
+    If the analysis reach n endorsements it will be added to the event collection and it will start a check to all analysis, if all of them are completed (reached n endorsements), the whole match will be considered completed
     """
     match=get_match(match_id)
     if not match:
@@ -745,18 +743,18 @@ def validate_data(username: str, match_id: ObjectId, data_index: int, judgement:
     if judgement:#endorsement
         if result==1:
            match.data[data_index].endorsements-=1
-           match.journal.append(f"User {username} removed the endorsement to match data {match.data[data_index].time_slot}, it has now {match.data[data_index].endorsements} endorsements")
+           match.journal.append(f"User {username} removed the endorsement to match analysis {match.data[data_index].time_slot}, it has now {match.data[data_index].endorsements} endorsements")
            match.save()
            return 0
         match.data[data_index].endorsements+=1
         if result==2:
             match.data[data_index].dislikes-=1
-            match.journal.append(f"User {username} removed the dislike to match data {match.data[data_index].time_slot}, it has now {match.data[data_index].dislikes} dislikes")
-        match.journal.append(f"Match data {match.data[data_index].time_slot} endorsed by {username}, it has now {match.data[data_index].endorsements} endorsements")
+            match.journal.append(f"User {username} removed the dislike to match analysis {match.data[data_index].time_slot}, it has now {match.data[data_index].dislikes} dislikes")
+        match.journal.append(f"Match analysis {match.data[data_index].time_slot} endorsed by {username}, it has now {match.data[data_index].endorsements} endorsements")
         if match.data[data_index].endorsements>=n:
             match.data[data_index].author=match.data[data_index].working
             match.data[data_index].working="" #qui va bene che diventi "" perchè non devo più toccarlo
-            match.journal.append(f"Match data {match.data[data_index].time_slot} is now confirmed because it reached {match.data[data_index].endorsements} endorsements")
+            match.journal.append(f"Match analysis {match.data[data_index].time_slot} is now confirmed because it reached {match.data[data_index].endorsements} endorsements")
             #This analysis is added to collection Events
             event=Event()
             event.match_id=match_id
@@ -767,22 +765,22 @@ def validate_data(username: str, match_id: ObjectId, data_index: int, judgement:
 
             if match.check_data:
                 match.is_completed=True
-                match.journal.append("Match is completed because every data reached {} endorsements".format(n))
+                match.journal.append("Match is completed because every analysis reached {} endorsements".format(n))
     else:#dislike
         if result==3:
             match.data[data_index].dislikes-=1
-            match.journal.append(f"User {username} removed the dislike to match data {match.data[data_index].time_slot}, it has now {match.data[data_index].dislikes} dislikes")
+            match.journal.append(f"User {username} removed the dislike to match analysis {match.data[data_index].time_slot}, it has now {match.data[data_index].dislikes} dislikes")
             match.save()
             return 0
         match.data[data_index].dislikes+=1
         if result==4:
             match.data[data_index].endorsements-=1
-            match.journal.append(f"User {username} removed the endorsement to match data {match.data[data_index].time_slot}, it has now {match.data[data_index].endorsements} endorsements")
-        match.journal.append(f"Match data {match.data[data_index].time_slot} disliked by {username}, it has now {match.data[data_index].dislikes} dislikes")
+            match.journal.append(f"User {username} removed the endorsement to match analysis {match.data[data_index].time_slot}, it has now {match.data[data_index].endorsements} endorsements")
+        match.journal.append(f"Match analysis {match.data[data_index].time_slot} disliked by {username}, it has now {match.data[data_index].dislikes} dislikes")
         if match.data[data_index].dislikes>=n:
             match.data[data_index].working=None
             match.data[data_index].author=None #così è nuovamente lavorabile
-            match.journal.append(f"Match data {match.data[data_index].time_slot} reached {match.data[data_index].dislikes} dislikes, it is suggested to change it")
+            match.journal.append(f"Match analysis {match.data[data_index].time_slot} reached {match.data[data_index].dislikes} dislikes, it is suggested to change it")
             #devo fare altro?
     match.save()
     return 0
