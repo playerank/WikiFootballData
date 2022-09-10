@@ -2,6 +2,7 @@ from datetime import datetime
 from typing import List
 from fastapi import APIRouter, Depends, responses 
 from pydantic import HttpUrl, Json
+import json
 from usersAPI import oauth2_scheme
 import services.match_service as svc
 from services.user_service import verify_role
@@ -607,7 +608,7 @@ async def get_free_time_slot(match_id, token: str=Depends(oauth2_scheme)):
 @router.post("/analyze-slot")
 async def analyze_time_slot(username: str, match_id, data_index: int, token: str=Depends(oauth2_scheme)):
     """
-    Signal the server that a user started processing the time slot and return the dict needed by soccerLogger to start working
+    Signal the server that a user started processing the time slot and return the json needed by soccerLogger to start working
     This function should be called only after "get_free_time_slot"
     """
     if data_index<0 or data_index>28:
@@ -621,18 +622,18 @@ async def analyze_time_slot(username: str, match_id, data_index: int, token: str
         return responses.JSONResponse(content={"message":"match values haven't been confirmed yet"},status_code=403)
     if result==4:
         return responses.JSONResponse(content={"message":"time_slot is being analyzed by another user"},status_code=400)
-    #Trasformare in file json con nome intuitivo
-    return result
+    soccerLogger_json_input=json.dumps(result, indent=4)
+    return soccerLogger_json_input
 
-@router.post("/add-data")
-async def add_data(username: str, match_id, data_index: int, detail: str, token: str=Depends(oauth2_scheme)):#detail is Json?
+@router.post("/add-detail")
+async def add_detail(username: str, match_id, data_index: int, detail: str, token: str=Depends(oauth2_scheme)):#detail is Json?
     """
     Add the result of the analysis to the db, if the match_id is incorrect return error
     This function should be called only after analyze_time_slot
     """
     if data_index<0 or data_index>28:
         return responses.JSONResponse(content={"message":f"data_index {data_index} is incorrect"},status_code=400)
-    result=svc.add_data(username,match_id,data_index,detail)
+    result=svc.add_detail(username,match_id,data_index,detail)
     if result==1:
         return responses.JSONResponse(content={"message":"match_id is incorrect"},status_code=400)
     if result==2:
@@ -641,47 +642,49 @@ async def add_data(username: str, match_id, data_index: int, detail: str, token:
         return responses.JSONResponse(content={"message":"match values haven't been confirmed yet"},status_code=403)
     if result==4:
         return responses.JSONResponse(content={"message":"time_slot is being analyzed by another user"},status_code=400)
-    return {"message":"match data updated successfully!"}
+    return {"message":"match detail updated successfully!"}
 
-@router.get("/get-data")
-async def get_data(match_id, n: int, token: str=Depends(oauth2_scheme)):
+@router.get("/get-analysis")
+async def get_analysis(match_id, n: int, token: str=Depends(oauth2_scheme)):
     """
-    Get n data of the match from db, if n==0 get all data
+    Get n anaysis of the match from db, if n==0 get all analysis
     """
     if n<0:
         return responses.JSONResponse(content={"message":"invalid n value"},status_code=400)
-    data=svc.get_data(match_id, n)
-    if not data:
+    analysis=svc.get_analysis(match_id, n)
+    if not analysis:
         return responses.JSONResponse(content={"message":"match_id is incorrect"},status_code=400)
-    return data
+    return analysis
 
-@router.get("/get-elaborated-data")
-async def get_elaborated_data(match_id, n: int, token: str=Depends(oauth2_scheme)):
+@router.get("/get-elaborated-analysis")
+async def get_elaborated_analysis(match_id, n: int, token: str=Depends(oauth2_scheme)):
     """
-    Get n elaborated data of the match from db, if n==0 get all elaborated data of the match
+    Get n elaborated analysis of the match from db, if n==0 get all elaborated analysis of the match
     """
     if n<0:
         return responses.JSONResponse(content={"message":"invalid n value"},status_code=400)
-    e_data=svc.get_elaborated_data(match_id, n)
-    if not e_data:
-        return responses.JSONResponse(content={"message":"this match doesn't have any elaborated data"},status_code=400)
-    return e_data
+    e_analysis=svc.get_elaborated_analysis(match_id, n)
+    if e_analysis==1:
+        return responses.JSONResponse(content={"message":"match_id is incorrect"},status_code=400)
+    if not e_analysis:
+        return responses.JSONResponse(content={"message":"this match doesn't have any elaborated analysis"},status_code=400)
+    return e_analysis
 
 @router.post("/validate")
-async def validate_data(username: str, match_id, data_index: int, judgement: bool): #token: str=Depends(oauth2_scheme)):
+async def validate_analysis(username: str, match_id, data_index: int, judgement: bool): #token: str=Depends(oauth2_scheme)):
     """
-    Add a new judgement to the match, if the match_id is incorrect or match data is already confirmed return error
+    Add a new judgement to the analysis of the match, if the match_id is incorrect or match analysis is already confirmed return error
     """
     if data_index<0 or data_index>28:
         return responses.JSONResponse(content={"message":"invalid data_index, it can be from 0 to 28"},status_code=400)
-    result=svc.validate_data(username,match_id,data_index,judgement)
+    result=svc.validate_analysis(username,match_id,data_index,judgement)
     if result==1:
         return responses.JSONResponse(content={"message":"match_id is incorrect"},status_code=400)
     if result==2:
-        return responses.JSONResponse(content={"message":"data already confirmed"},status_code=403)
+        return responses.JSONResponse(content={"message":"analysis already confirmed"},status_code=403)
     if result==3:
         return responses.JSONResponse(content={"message":"no detail to validate"},status_code=400)
-    return {"message":"Data judgement updated successfully!"}
+    return {"message":"Analysis judgement updated successfully!"}
 
 @router.get("/journal")
 async def read_journal(match_id, token: str=Depends(oauth2_scheme)):
