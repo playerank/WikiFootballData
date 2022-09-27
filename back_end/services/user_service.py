@@ -23,9 +23,9 @@ def hash_password(password):
 
 def create_user(username: str, password) -> User:
     """
-    Create User and add it to db, return True if operation is successful, False otherwise
+    Create User and add it to db, return the User created
     """
-    user= User()
+    user=User()
     user.username=username
     user.password=hash_password(password)
     user.is_online=False
@@ -57,7 +57,9 @@ def log_user(username: str, password: str):
 
 def verify_role(username: str):
     """
-    Return the role of the User identified by username
+    Return the role of the User identified by username.
+    Return U if username is incorrect, M if user is not online, A if user is admin,
+    E if user is admin and S if is a simple user
     """
     user=get_user(username)
     if not user:

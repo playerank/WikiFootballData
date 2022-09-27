@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import List
 from bson import ObjectId
-from pydantic import HttpUrl
+from pydantic import HttpUrl, BaseModel
 from data.matches import Match, Analysis, create_info_dict
 from data.events import Event
 from data.rules import n
@@ -56,7 +56,7 @@ def get_completed_matches(n: int) -> List[Match]:
     #     print("Match {}-{}, competition_id {} season {}, completato? {}".format(m.home_team_id,m.away_team_id,m.competition_id,m.season,m.is_completed))
     return c_matches
 
-def get_completed_match_data(match_id: ObjectId) -> List | int:
+def get_completed_match_data(match_id: ObjectId):
     """
     Return the list of data of the match identified by match_id.
     1 if the match doesn't exist, 2 if match is not completed
@@ -322,6 +322,42 @@ def add_team_formation(match_id: ObjectId, home: bool, player_names: List[str], 
         match.journal.append("Away team formation added")
     match.save()
     return 0
+
+##ALTERNATIVE VERSION
+# class Name_and_number(BaseModel):
+#     name: str
+#     number: int
+# def add_team_formation(match_id: ObjectId, home: bool, players: List[Name_and_number]):
+#     """
+#     Add the requested formation to the match identified by match_id.
+#     Return 1 if the match doesn't exist, 2 if the requested formation is confirmed, 3 if formation already added, player_name if player_name is incorrect
+#     """
+#     match=get_match(match_id)
+#     if not match:
+#         return 1
+#     if home:
+#         if match.home_formation_is_confirmed:
+#             return 2
+#         if match.home_team_formation:
+#             return 3
+#     else:
+#         if match.away_formation_is_confirmed:
+#             return 2
+#         if match.away_team_formation:
+#             return 3
+    
+#     for p in players:
+#         player_id=get_player_id(p.name)
+#         if not player_id:
+#             return p
+#         match.team_append(home,player_id,p.name,p.number)
+    
+#     if home:
+#         match.journal.append("Home team formation added")
+#     else:
+#         match.journal.append("Away team formation added")
+#     match.save()
+#     return 0
 
 def assess_formation(match_id: ObjectId, home: bool, username: str):
     """
