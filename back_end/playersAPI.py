@@ -13,7 +13,7 @@ router = APIRouter(
 @router.get("")
 async def get_player_list(n: int):
     """
-    Return n players from db, if n==0 then return all players
+    Return n players from db, if n==0 then return all players, if n<0 return error
     """
     if n<0:
         return responses.JSONResponse(content={"message":"invalid value"},status_code=400)
@@ -24,7 +24,8 @@ async def get_player_list(n: int):
 async def add_player(player_name: str, date_of_birth_str: str, nationality: str, current_team: str, club_shirt_number: int, national_team_shirt_number: int):
     """
     Add player to the collection, if the player doesn't play for the national team as national_team_shirt_number insert 0.
-    If player already exists return error
+    If player already exists, date_of_birth_str is in a wrong format, club_shirt_number is invalid, current_team is incorrect or 
+    nationality is incorrect return error
     """
     try:
         date_of_birth=datetime.strptime(date_of_birth_str, '%d/%m/%Y')
@@ -48,7 +49,9 @@ async def add_player(player_name: str, date_of_birth_str: str, nationality: str,
 @router.post("/change")
 async def change_player(player_name: str, date_of_birth_str: str, new_player_name: str, new_date_of_birth_str: str, new_nationality: str):
     """
-    Change the player values, if player inexistent or already confirmed definetely return error
+    Change the player values.
+    If player inexistent, player is already confirmed definetely, date_of_birth_str is in a wrong format,
+    new_date_of_birth_str is in a wrong format or nationality is incorrect return error
     """
     try:
         date_of_birth=datetime.strptime(date_of_birth_str, '%d/%m/%Y')
@@ -79,7 +82,8 @@ async def change_player(player_name: str, date_of_birth_str: str, new_player_nam
 @router.post("/assess")
 async def assess_player(username: str, player_name: str, date_of_birth_str: str):
     """
-    Confirm definetely the player parameter, if player inexistent or already confirmed definetely return error.
+    Confirm definetely the player parameter.
+    If player inexistent, player is already confirmed definetely or date_of_birth_str is in a wrong format return error.
     Only administrators or editors can call this function
     """
     try:
@@ -103,7 +107,9 @@ async def assess_player(username: str, player_name: str, date_of_birth_str: str)
 @router.post("/modify")
 async def modify_player(username: str, player_name: str, date_of_birth_str: str, new_player_name: str, new_date_of_birth_str: str, new_nationality: str):
     """
-    Modify and confirm definetely the player values, if player inexistent return error.
+    Modify and confirm definetely the player values.
+    If player inexistent, date_of_birth_str is in a wrong format, new_date_of_birth_str is in a wrong format
+    or nationality is incorrect return error.
     Only administrators or editors can call this function
     """
     try:
@@ -137,7 +143,8 @@ async def modify_player(username: str, player_name: str, date_of_birth_str: str,
 async def update_player_conditions(player_name: str, date_of_birth_str: str, new_team: str, new_club_shirt_number: int, new_national_team_shirt_number: int):
     """
     Update the current player conditions that are the team, the club shirt number and the national team shirt number, if the player doesn't play for the national team as national_team_shirt_number insert 0.
-    if the player doesn't exist or the club shirt number is an invalid value return error
+    If the player doesn't exist, the club shirt number is an invalid value, date_of_birth_str is in a wrong format or
+    current_team is incorrect return error
     """
     try:
         date_of_birth=datetime.strptime(date_of_birth_str, '%d/%m/%Y')

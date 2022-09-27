@@ -26,20 +26,21 @@ def create_access_token(data: Dict[str, str], expires_delta: timedelta):
 @router.post("/sign_up")
 async def sign_up(username: str, password: str):
     """
-    Register a new user
+    Register a new user, if username already exists return error
     """
     existing_user=svc.get_user(username)
     if existing_user:
         return responses.JSONResponse(content={"message":f"username {username} already exists"},status_code=400)
     new_user=svc.create_user(username,password)
-    return {"message":"user created succesfully!"}#id={new_user.id} debug
+    return {"message":"user created succesfully!"}
 
 @router.post("/login")
 async def login(form_data: OAuth2PasswordRequestForm= Depends()):
     """
-    Log in a new User, if username doesen't exist or password is incorrect return error.
-    IF YOU ARE USING THE FASTAPI DOCS THEN THIS FUNCTION IS CALLED AUTOMATICALLY BY THE SECURITY FUNCTION SO USE THAT, NOT THIS
+    Log in a new User, if username doesen't exist, password is incorrect or User already online return error.
     """
+    # IF YOU ARE USING THE FASTAPI DOCS THEN THIS FUNCTION IS CALLED AUTOMATICALLY BY THE SECURITY FUNCTION SO USE THAT, NOT THIS
+    # """
     username=form_data.username
     password=form_data.password
     result=svc.log_user(username, password)
@@ -56,7 +57,7 @@ async def login(form_data: OAuth2PasswordRequestForm= Depends()):
 @router.get("/logout")
 async def logout(username: str, token: str=Depends(oauth2_scheme)):
     """
-    Log out a User, if username is not online return error
+    Log out a User, if username is incorrect or User is not online return error
     """
     user=svc.get_user(username)
     if not user or user.is_online==False:
@@ -67,20 +68,20 @@ async def logout(username: str, token: str=Depends(oauth2_scheme)):
 @router.post("/role")
 async def add_editor(username: str, user: str, token: str=Depends(oauth2_scheme)):
     """
-    Change user role to editor, if username is incorrect return error
+    Change user role to editor, if user is incorrect return error
     Only administrators or editors can call this function
     """
     role=svc.verify_role(username)
     if role!="A" and role!="E":
         return responses.JSONResponse(content={"message":"Forbidden Operation"},status_code=403)
     if not svc.add_editor(user):
-        return responses.JSONResponse(content={"message":"username is incorrect!"},status_code=400)
+        return responses.JSONResponse(content={"message":"user is incorrect!"},status_code=400)
     return {"message": f"user {user} role updated successfully!"}
 
 @router.get("")
 async def get_user_list(username: str, n: int, token: str=Depends(oauth2_scheme)):
     """
-    Get n users from db, if n==0 then return all users
+    Get n users from db, if n==0 then return all users, if n<0 return error
     Only administrators can call this function
     """
     if n<0:
@@ -93,9 +94,11 @@ async def get_user_list(username: str, n: int, token: str=Depends(oauth2_scheme)
 @router.get("/online")
 async def get_online_user_list(username: str, n: int, token: str=Depends(oauth2_scheme)):
     """
-    Get n online users from db, if n==0 then return all online users
+    Get n online users from db, if n==0 then return all online users, if n<0 return error
     Only administrators can call this function
     """
+    if n<0:
+        return responses.JSONResponse(content={"message":"invalid value"},status_code=400)
     if svc.verify_role(username)!="A":
         return responses.JSONResponse(content={"message":"Forbidden Operation"},status_code=403)
     online_user_list=svc.get_online_users(n)

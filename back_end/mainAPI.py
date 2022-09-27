@@ -5,6 +5,7 @@ import requested_matchesAPI
 import competitionsAPI
 import teamsAPI
 import playersAPI
+import managersAPI
 import data.mongo_setup as mongo_setup
 from data.rules import n
 from services.user_service import verify_role
@@ -16,6 +17,7 @@ app.include_router(requested_matchesAPI.router)
 app.include_router(competitionsAPI.router)
 app.include_router(teamsAPI.router)
 app.include_router(playersAPI.router)
+app.include_router(managersAPI.router)
 
 #ROBOMONGO sostituto di mongoDBcompass
 
