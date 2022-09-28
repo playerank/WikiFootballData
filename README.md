@@ -13,11 +13,11 @@ Once a match is entirely analyzed and the results "confirmed", the data created 
 
 # Requirements
 
--python version 3.10.4 or later (to verify installation ```$py --version```)
--fastapi version 0.75.2 or later
--mongoengine version 0.24.1 or later
--python-jose version 3.3.0 or later
--passlib 1.7.4 or later
+-python version 3.10.4 or later (to verify installation ```$py --version```)<br>
+-fastapi version 0.75.2 or later<br>
+-mongoengine version 0.24.1 or later<br>
+-python-jose version 3.3.0 or later<br>
+-passlib 1.7.4 or later<br>
 
 # Author
 
