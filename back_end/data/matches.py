@@ -33,12 +33,11 @@ class Match(mongoengine.Document):
     working: List[str]=mongoengine.ListField()
     link: HttpUrl=mongoengine.URLField()
     link_is_confirmed: bool=mongoengine.BooleanField(default=False)
-    report: str=mongoengine.StringField()
+    report_link: HttpUrl=mongoengine.URLField()
     report_is_confirmed: bool=mongoengine.BooleanField(default=False)
     journal: List[str]=mongoengine.ListField(default=["Match created!"])
     data: List[Analysis]=mongoengine.EmbeddedDocumentListField(Analysis)
     started_working: bool=mongoengine.BooleanField(default=False)
-    #Dovrebbe rappresentare il fatto che link,formazioni,ufficiali e manager e nome della partita non possono più essere modificati 
     is_completed: bool=mongoengine.BooleanField(default=False)
 
     meta={
@@ -100,7 +99,7 @@ class Match(mongoengine.Document):
                     self.data.pop()
             if self.penalty:
                 self.data.append("penalty")
-        elif l==21: #pochissime le partite terminate ai rigori senza supplementari però esistono Community Shield, replay di partite di carabao cup etc
+        elif l==21: #few matches ends with penalty without extended time (Community Shield, replay of Carabao cup matches etc.)
             if not self.penalty:
                 self.data.pop() #now ends with e_t_2
             if self.extended_time:
@@ -150,9 +149,9 @@ class Match(mongoengine.Document):
         else:
             self.away_team_formation.append(p)
 
-#time_slot vanno da 1-5 a rigori
-#1-5, 6-10, 11-15, 16-20, 21-25, 26-30, 31-35, 36-40, 41-45, recupero1, 46-50 -> 86-90, recupero2, 91-95 -> 101-105, recupero3, 106-110 -> 116-120, recupero4, rigori
-#sono 29
+#time_slot goes from 1-5 to penalty
+#1-5, 6-10, 11-15, 16-20, 21-25, 26-30, 31-35, 36-40, 41-45, e_t_1, 46-50 -> 86-90, e_t_2, 91-95 -> 101-105, e_t_3, 106-110 -> 116-120, e_t_4, penalty
+#they are 29
 
 def create_info_dict(m: Match):
     """

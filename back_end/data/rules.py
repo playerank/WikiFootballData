@@ -1,3 +1,3 @@
 n: int=5
 
-#o collection delle rule chiamato config oppure file config json da serializzare
+#collection of the rules called config or config file json to serialize

@@ -11,6 +11,7 @@ class Manager(mongoengine.Document):
     date_of_birth: datetime=mongoengine.DateTimeField(required=True)
     nationality: str=mongoengine.StringField(required=True)
     is_confirmed: bool=mongoengine.BooleanField(default=False) #confirm values
+    #Condition (could change often)
     team_id: ObjectId=mongoengine.ObjectIdField(required=True)
 
     meta={
