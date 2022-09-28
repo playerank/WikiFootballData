@@ -22,7 +22,7 @@ def create_access_token(data: Dict[str, str], expires_delta: timedelta):
     encoded_jwt=jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
-##RICORDARSI DI FARE LAVORI ESTETICI (come strip(), etc)
+##String manipulation (like strip(), etc) in the front end
 @router.post("/sign_up")
 async def sign_up(username: str, password: str):
     """
@@ -38,9 +38,8 @@ async def sign_up(username: str, password: str):
 async def login(form_data: OAuth2PasswordRequestForm= Depends()):
     """
     Log in a new User, if username doesen't exist, password is incorrect or User already online return error.
+    IF YOU ARE USING THE FASTAPI DOCS THEN THIS FUNCTION IS CALLED AUTOMATICALLY BY THE SECURITY FUNCTION SO USE THAT, NOT THIS
     """
-    # IF YOU ARE USING THE FASTAPI DOCS THEN THIS FUNCTION IS CALLED AUTOMATICALLY BY THE SECURITY FUNCTION SO USE THAT, NOT THIS
-    # """
     username=form_data.username
     password=form_data.password
     result=svc.log_user(username, password)

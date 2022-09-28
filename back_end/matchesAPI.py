@@ -1,8 +1,8 @@
 from datetime import datetime
-from typing import Dict, List
-from fastapi import APIRouter, Depends, responses 
-from pydantic import HttpUrl, Json
 import json
+from typing import List
+from fastapi import APIRouter, Depends, responses
+from pydantic import HttpUrl
 from usersAPI import oauth2_scheme
 import services.match_service as svc
 from services.user_service import verify_role
@@ -209,7 +209,7 @@ async def modify_officials_and_managers(match_id, username: str, home_team_manag
 
 
 @router.post("/add-home-team-formation")
-async def add_home_formation(match_id, player_names: List[str], player_numbers: List[int]):#, token: str=Depends(oauth2_scheme)):
+async def add_home_formation(match_id, player_names: List[str], player_numbers: List[int], token: str=Depends(oauth2_scheme)):
     """
     Add to the match the formation of the home team, the order must be lineup then bench and 
     the lineup should be in order goalkeeper->defenders->midfielders->strikers from left to right.
@@ -539,7 +539,7 @@ async def change_match_link(match_id, new_link: HttpUrl, token: str=Depends(oaut
     return {"message":"Match link updated successfully!"}
 
 @router.post("/assess-link")
-async def assess_link(username: str,match_id, token: str=Depends(oauth2_scheme)):
+async def assess_link(username: str, match_id, token: str=Depends(oauth2_scheme)):
     """
     Confirm definitely the match link in the db.
     If match_id is incorrect or link is confirmed return error.
@@ -578,31 +578,40 @@ async def get_match_report(match_id, token: str=Depends(oauth2_scheme)):
     Get the match report of the specified match.
     If match_id is incorrect return error
     """
-    report=svc.get_match_report(match_id)
-    if not report:
+    report_link=svc.get_match_report(match_id)
+    if not report_link:
         return responses.JSONResponse(content={"message":"match_id is incorrect"},status_code=400)
-    return report
+    return report_link
 
 @router.post("/add-report")
-async def add_match_report(match_id, match_report: str, token: str=Depends(oauth2_scheme)):#report is Json?
+async def add_match_report(match_id, report_link: HttpUrl, token: str=Depends(oauth2_scheme)):#report is Json?
     """
     Add the report to the match in the db.
     If match_id is incorrect or match report has been already added return error
     """
-    result=svc.add_match_report(match_id, match_report)
+    result=svc.add_match_report(match_id, report_link)
     if result==1:
         return responses.JSONResponse(content={"message":"match_id is incorrect"},status_code=400)
     if result==2:
         return responses.JSONResponse(content={"message":"match report already added"},status_code=400)
     return {"message":"Report added successfully!"}
 
+##ALTERNATIVE VERSION
+# async def add_match_report(match_id, report: UploadFile= File(...)):#, token: str=Depends(oauth2_scheme)):#report is Json?
+#     """
+#     Add the report to the match in the db.
+#     If match_id is incorrect or match report has been already added return error
+#     """
+#     #debug
+#     print(report.filename)
+
 @router.post("/change-report")
-async def change_match_report(match_id, report: str, token: str=Depends(oauth2_scheme)):
+async def change_match_report(match_id, report_link: HttpUrl, token: str=Depends(oauth2_scheme)):
     """
     Change the report of the match in the db.
     If match_id is incorrect or match report is confirmed return error
     """
-    result=svc.change_match_report(True, None, match_id, report)
+    result=svc.change_match_report(True, None, match_id, report_link)
     if result==1:
         return responses.JSONResponse(content={"message":"match_id is incorrect"},status_code=400)
     if result==2:
@@ -629,7 +638,7 @@ async def assess_match_report(username: str, match_id, token: str=Depends(oauth2
     return {"message":"Report confirmed successfully!"}
 
 @router.post("/modify-report")
-async def modify_match_report(username: str, match_id, report: str, token: str=Depends(oauth2_scheme)):
+async def modify_match_report(username: str, match_id, report_link: HttpUrl, token: str=Depends(oauth2_scheme)):
     """
     Modify and confirm definitely the match report.
     If match_id is incorrect return error.
@@ -638,7 +647,7 @@ async def modify_match_report(username: str, match_id, report: str, token: str=D
     role=verify_role(username)
     if role!="A" and role!="E":
         return responses.JSONResponse(content={"message":"Forbidden Operation"},status_code=403)
-    if svc.change_match_report(False, username, match_id, report)==1:
+    if svc.change_match_report(False, username, match_id, report_link)==1:
         return responses.JSONResponse(content={"message":"match_id is incorrect"},status_code=400)
     return {"message":"report updated and confirmed successfully!"}
 
@@ -699,16 +708,17 @@ async def analyze_time_slot(username: str, match_id, data_index: int, token: str
     return soccerLogger_json_input
 
 @router.post("/add-detail")
-async def add_detail(username: str, match_id, data_index: int, detail: str, token: str=Depends(oauth2_scheme)):#detail is Json?
+async def add_detail(username: str, match_id, data_index: int, detail: str, token: str=Depends(oauth2_scheme)):
     """
     Add the result of the analysis to the match in the db.
     If match_id is incorrect, match is completed, match values aren't confirmed or
     the chosen time_slot is being analyzed by another user return error.
     This function should be called after "analyze_time_slot"
     """
+    json_list_detail: List[str]=json.loads(detail)
     if data_index<0 or data_index>28:
         return responses.JSONResponse(content={"message":f"data_index {data_index} is incorrect"},status_code=400)
-    result=svc.add_detail(username,match_id,data_index,detail)
+    result=svc.add_detail(username,match_id,data_index,json_list_detail)
     if result==1:
         return responses.JSONResponse(content={"message":"match_id is incorrect"},status_code=400)
     if result==2:
