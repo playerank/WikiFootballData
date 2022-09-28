@@ -13,11 +13,26 @@ Once a match is entirely analyzed and the results "confirmed", the data created 
 
 # Requirements
 
--python version 3.10.4 or later (to verify installation ```$py --version```)<br>
+-python version 3.10.4 or later (to verify installation ```sh $py --version```)<br>
 -fastapi version 0.75.2 or later<br>
 -mongoengine version 0.24.1 or later<br>
 -python-jose version 3.3.0 or later<br>
 -passlib 1.7.4 or later<br>
+
+# Guide
+1. Check if python is arleady installed in your pc<br>
+2. Install all necessary dependencing with [pip](https://pypi.org/project/pip/)
+```sh
+$ py -m pip install -r requirements.txt
+```
+3. Move in back_end
+```sh
+$ cd "back_end"
+```
+4. Run
+```sh
+$ uvicorn mainAPI:app --reload
+```
 
 # Author
 
