@@ -29,7 +29,7 @@ def create_user(username: str, password) -> User:
     user.username=username
     user.password=hash_password(password)
     user.is_online=False
-    #Valore is_editor e is_administrator sono di default settati a False
+    #is_editor and is_administrator setted to False
     user.save()
     return user
 
@@ -40,14 +40,14 @@ def log_user(username: str, password: str):
     A if user is admin, E if user is admin and S if is a simple user
     """
     user:User=User.objects(username=username).first()
-    #L'operazione fallisce
+    #Failure
     if not user:
         return "U"
     if not pwd_context.verify(password, user.password):
         return "P"
     if user.is_online:
         return "L"
-    #L'operazione ha successo
+    #Success
     user.update(is_online=True)
     if user.is_administrator:
         return "A"
@@ -78,7 +78,7 @@ def add_editor(username: str) -> bool:
     Return True if operation is successful, False otherwise
     """
     new_editor:User=User.objects(username=username).first()
-    #L'operazione fallisce
+    #Failure
     if not new_editor:
         return False
     new_editor.update(is_editor=True)

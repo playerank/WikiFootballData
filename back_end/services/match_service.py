@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import List
 from bson import ObjectId
-from pydantic import HttpUrl, BaseModel
+from pydantic import HttpUrl
 from data.matches import Match, Analysis, create_info_dict
 from data.events import Event
 from data.rules import n
@@ -169,21 +169,21 @@ def get_match_complete_info(match_id: ObjectId):
         info.update({"Home Team": "Confirmed"})
     else:
         info.update({"Home Team": "Not confirmed"})
-    info.update({"Away Team":m.away_team_formation})
+    info.update({"Away Team Formation":m.away_team_formation})
     if m.away_formation_is_confirmed:
         info.update({"Away Team": "Confirmed"})
     else:
         info.update({"Away Team": "Not confirmed"})
     info.update({"Link":m.link})
     if m.link_is_confirmed:
-        info.update({"Link":"Confirmed"})
+        info.update({"Link confirm":"Confirmed"})
     else:
-        info.update({"Link":"Not confirmed"})
-    info.update({"Report":m.report})
+        info.update({"Link confirm":"Not confirmed"})
+    info.update({"Report":m.report_link})
     if m.report_is_confirmed:
-        info.update({"Report":"Confirmed"})
+        info.update({"Report confirm":"Confirmed"})
     else:
-        info.update({"Report":"Not confirmed"})
+        info.update({"Report donfirm":"Not confirmed"})
     if m.is_completed:
         info.update({"Match analisys":"Completed"})
     else:
@@ -444,7 +444,7 @@ def change_formation(check: bool, match_id: ObjectId, home: bool, username: str,
     match.save()
     return 0
 
-def change_info(check: bool, username: str, match_id, home_team: str, away_team: str, season: str, competition_name: str, round: str, date: datetime, link: HttpUrl, extended_time: bool, penalty: bool):
+def change_info(check: bool, username: str, match_id, home_team: str, away_team: str, season: str, competition_name: str, round: str, date: datetime, extended_time: bool, penalty: bool):
     """
     Change or modify the match info (depends of the value of check).
     Return 1 if the match doesn't exist, 2 if the match_name is already confirmed, 3 if analysis of the match already started
@@ -556,12 +556,12 @@ def get_match_report(match_id: ObjectId):
     """
     Return the report of the match identified by match_id
     """
-    match:Match=Match.objects(id=match_id).only('report').first()
+    match:Match=Match.objects(id=match_id).only('report_link').first()
     if not match:
         return None
-    return match.report
+    return match.report_link
 
-def add_match_report(match_id: ObjectId, report):
+def add_match_report(match_id: ObjectId, report_link: HttpUrl):
     """
     Add the match report to the match identified by match_id.
     Return 1 if the match doesn't exist, 2 if the match report was already present
@@ -569,14 +569,14 @@ def add_match_report(match_id: ObjectId, report):
     match=get_match(match_id)
     if not match:
         return 1
-    if match.report!=None:
+    if match.report_link:
         return 2
-    match.report=report
+    match.report_link=report_link
     match.journal.append("Match report added")
     match.save()
     return 0
 
-def change_match_report(check: bool, username: str, match_id: ObjectId, new_report: str):
+def change_match_report(check: bool, username: str, match_id: ObjectId, new_report: HttpUrl):
     """
     Change the report of the match identified by match_id.
     Return 1 if the match doesn't exist, 2 if the match report is already confirmed
@@ -586,7 +586,7 @@ def change_match_report(check: bool, username: str, match_id: ObjectId, new_repo
         return 1
     if check and match.report_is_confirmed:
         return 2
-    match.report=new_report
+    match.report_link=new_report
     if check:
         match.journal.append("Match report updated")
     else:
@@ -605,7 +605,7 @@ def assess_match_report(username: str, match_id: ObjectId):
         return 1
     if match.report_is_confirmed:
         return 2
-    if not match.report:
+    if not match.report_link:
         return 3
     match.report_is_confirmed=True
     match.journal.append(f"Match report has been confirmed by {username}")
@@ -670,7 +670,7 @@ def analyze_time_slot(username: str, match_id: ObjectId, data_index: int):
     match.save()
     return create_info_dict(match)
 
-def add_detail(username: str, match_id: ObjectId, data_index: int, detail: str):#Json?:
+def add_detail(username: str, match_id: ObjectId, data_index: int, detail: List[str]):
     """
     Add the detail of the specified data.
     Return 1 if the match doesn't exist, 2 if the match is already completed, 3 if match values are not confirmed, 4 if the specified data is being analyzed by another user
