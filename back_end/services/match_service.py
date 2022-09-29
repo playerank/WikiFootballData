@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List
+from typing import Any, Dict, List
 from bson import ObjectId
 from pydantic import HttpUrl
 from data.matches import Match, Analysis, create_info_dict
@@ -91,7 +91,7 @@ def get_not_completed_matches(n: int) -> List[Match]:
         nc_matches: List[Match]=list(Match.objects[:n].filter(is_completed=False))
     return nc_matches
 
-def add_match(username: str, home_team: str, away_team: str, season: str, competition_name: str,round: str,date: datetime, link: HttpUrl, extended_time: bool, penalty: bool):
+def add_match(username: str, home_team: str, away_team: str, season: str, competition_name: str, round: str, date: datetime, link: HttpUrl, extended_time: bool, penalty: bool):
     """
     Create a new Match and add it to the db.
     Return 1 if competition_name is incorrect, 2 if home_team is incorrect, 3 if away_team is incorrect, 4 if already exists a match with that link. The checks are in efficency order
@@ -106,10 +106,10 @@ def add_match(username: str, home_team: str, away_team: str, season: str, compet
     if not away_team_id:
         return 3
     e_match=Match.objects() \
-        .filter(home_team=home_team) \
-        .filter(away_team=away_team) \
-        .filter(competition_name=competition_name) \
-        .filter(date=date) \
+        .filter(home_team_id=home_team_id) \
+        .filter(away_team_id=away_team_id) \
+        .filter(competition_id=competition_id) \
+        .filter(date_utc=date) \
         .only('id').first()
     if e_match:
         return 4
@@ -670,7 +670,7 @@ def analyze_time_slot(username: str, match_id: ObjectId, data_index: int):
     match.save()
     return create_info_dict(match)
 
-def add_detail(username: str, match_id: ObjectId, data_index: int, detail: List[str]):
+def add_detail(username: str, match_id: ObjectId, data_index: int, detail: List[Dict[str,Any]]):
     """
     Add the detail of the specified data.
     Return 1 if the match doesn't exist, 2 if the match is already completed, 3 if match values are not confirmed, 4 if the specified data is being analyzed by another user
