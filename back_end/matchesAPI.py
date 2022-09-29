@@ -1,6 +1,6 @@
 from datetime import datetime
 import json
-from typing import List
+from typing import Any, Dict, List
 from fastapi import APIRouter, Depends, responses
 from pydantic import HttpUrl
 from usersAPI import oauth2_scheme
@@ -715,7 +715,8 @@ async def add_detail(username: str, match_id, data_index: int, detail: str, toke
     the chosen time_slot is being analyzed by another user return error.
     This function should be called after "analyze_time_slot"
     """
-    json_list_detail: List[str]=json.loads(detail)
+    json_list_detail: List[Dict[str,Any]]=json.loads(detail)
+    #AGGIUNGERE CONTROLLI SUL TIPO?
     if data_index<0 or data_index>28:
         return responses.JSONResponse(content={"message":f"data_index {data_index} is incorrect"},status_code=400)
     result=svc.add_detail(username,match_id,data_index,json_list_detail)
