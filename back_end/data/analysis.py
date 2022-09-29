@@ -1,4 +1,4 @@
-from typing import List
+from typing import Any, Dict, List
 import mongoengine
 
 class Analysis(mongoengine.EmbeddedDocument):
@@ -6,8 +6,8 @@ class Analysis(mongoengine.EmbeddedDocument):
     Class defining an analysis
     """
     time_slot: str=mongoengine.StringField(required=True)
-    detail: List[str]=mongoengine.ListField()
-    working: str=mongoengine.StringField(required=True)
+    detail: List[Dict[str,Any]]=mongoengine.ListField()
+    working: str=mongoengine.StringField()
     author: str=mongoengine.StringField()
     endorsements: int=mongoengine.IntField(required=True)
     dislikes: int=mongoengine.IntField(required=True)
