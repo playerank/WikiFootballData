@@ -35,7 +35,7 @@ $ uvicorn mainAPI:app --reload
 ```
 Once launched, on your shell, you should have a success message such as the following:
 ![bash](/Scheme/bash.png)<br/>
-5. Now you can interact with the Database from a browser, adding ```/docs``` or ```/redocs``` to the following url: ```http://127.0.0.1:8000```, you will see the automatic generated docs by [fastAPI](https://fastapi.tiangolo.com/)
+5. Now you can interact with the Database from a browser, adding ```/docs``` or ```/redocs``` to the following url: [http://127.0.0.1:8000](http://127.0.0.1:8000), you will see the automatic generated docs by [fastAPI](https://fastapi.tiangolo.com/)
 
 # Author
 
