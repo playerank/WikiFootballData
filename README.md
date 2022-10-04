@@ -20,19 +20,22 @@ Once a match is entirely analyzed and the results "confirmed", the data created 
 -passlib 1.7.4 or later<br>
 
 # Guide
-1. Check if python is arleady installed in your pc<br>
-2. Install all necessary dependencing with [pip](https://pypi.org/project/pip/)
+1. Check if python is arleady installed in your pc<br/>
+2. Install all necessary dependencing with [pip](https://pypi.org/project/pip/)<br/>
 ```sh
 $ py -m pip install -r requirements.txt
 ```
-3. Move in back_end
+3. Move in back_end<br/>
 ```sh
 $ cd "back_end"
 ```
-4. Run
+4. Run<br/>
 ```sh
 $ uvicorn mainAPI:app --reload
 ```
+Once launched, on your shell, you should have a success message such as the following:
+![bash](/Scheme/bash.png)
+4. Now you can interact with the Database from a browser, adding ```/docs``` or ```/redocs``` to the following url: ```http://127.0.0.1:8000```, you will see the automatic generated docs by [fastAPI](https://fastapi.tiangolo.com/)<br/>
 
 # Author
 
