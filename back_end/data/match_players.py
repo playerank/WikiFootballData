@@ -17,7 +17,7 @@ def create_player_info(p: Match_Player):
         "goals":0,
         "own_goals":0,
         "played_minutes":0,
-        "player_id":p.player_id,
+        "player_id":f"{p.player_id}",
         "red_cards":0,
         "yellow_card":0
     }

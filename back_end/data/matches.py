@@ -135,19 +135,22 @@ class Match(mongoengine.Document):
                 return False
         return True
     
-    @property
-    def team_append(self, home: bool, player_id: ObjectId, player_name: str, shirt_number: int):
-        """
-        Append to the indicated formation the Match_Player object with the right parameters
-        """
-        p=Match_Player()
-        p.player_id=player_id
-        p.player_name=player_name
-        p.shirt_number=shirt_number
-        if home:
-            self.home_team_formation.append(p)
-        else:
-            self.away_team_formation.append(p)
+def team_append(m: Match, home: bool, player_id: ObjectId, player_name: str, shirt_number: int):
+    """
+    Append to the indicated formation the Match_Player object with the right parameters
+    """
+    print(home)
+    print(player_id)
+    print(player_name)
+    print(shirt_number)
+    p=Match_Player()
+    p.player_id=player_id
+    p.player_name=player_name
+    p.shirt_number=shirt_number
+    if home:
+        m.home_team_formation.append(p)
+    else:
+        m.away_team_formation.append(p)
 
 #time_slot goes from 1-5 to penalty
 #1-5, 6-10, 11-15, 16-20, 21-25, 26-30, 31-35, 36-40, 41-45, e_t_1, 46-50 -> 86-90, e_t_2, 91-95 -> 101-105, e_t_3, 106-110 -> 116-120, e_t_4, penalty
@@ -160,9 +163,9 @@ def create_info_dict(m: Match):
     d=dict()
     d={
         "addictional attirbutes":m.additional_attributes,
-        "competition_id":m.competition_id,
-        "date_utc":m.date_utc,
-        "match_id":m.id,
+        "competition_id":f"{m.competition_id}",
+        "date_utc":f"{m.date_utc}",
+        "match_id":f"{m.id}",
         "round":m.round,
         "season":m.season,
         "match official":{
@@ -172,11 +175,12 @@ def create_info_dict(m: Match):
             "fourth_man":m.officials[3]
         },
         "home_team":{
-            "team_id":m.home_team_id,
-            "coach_id":m.home_manager_id,
+            "team_id":f"{m.home_team_id}",
+            "coach_id":f"{m.home_manager_id}",
             "score":0,
             "formation":{
                 "bench":[
+                    create_player_info(m.home_team_formation[11]),
                     create_player_info(m.home_team_formation[12]),
                     create_player_info(m.home_team_formation[13]),
                     create_player_info(m.home_team_formation[14]),
@@ -186,9 +190,7 @@ def create_info_dict(m: Match):
                     create_player_info(m.home_team_formation[18]),
                     create_player_info(m.home_team_formation[19]),
                     create_player_info(m.home_team_formation[20]),
-                    create_player_info(m.home_team_formation[21]),
-                    create_player_info(m.home_team_formation[22]),
-                    create_player_info(m.home_team_formation[23])
+                    create_player_info(m.home_team_formation[21])
                 ],
                 "lineup":[
                     create_player_info(m.home_team_formation[0]),
@@ -206,23 +208,22 @@ def create_info_dict(m: Match):
             }
         },
         "away_team_formation":{
-            "team_id":m.away_team_formation,
-            "coach_id":m.away_manager_id,
+            "team_id":f"{m.away_team_formation}",
+            "coach_id":f"{m.away_manager_id}",
             "score":0,
             "formation":{
                 "bench":[
-                    create_player_info(m.away_team_formation[12]),
-                    create_player_info(m.away_team_formation[13]),
-                    create_player_info(m.away_team_formation[14]),
-                    create_player_info(m.away_team_formation[15]),
-                    create_player_info(m.away_team_formation[16]),
-                    create_player_info(m.away_team_formation[17]),
-                    create_player_info(m.away_team_formation[18]),
-                    create_player_info(m.away_team_formation[19]),
-                    create_player_info(m.away_team_formation[20]),
-                    create_player_info(m.away_team_formation[21]),
-                    create_player_info(m.away_team_formation[22]),
-                    create_player_info(m.away_team_formation[23])
+                    create_player_info(m.home_team_formation[11]),
+                    create_player_info(m.home_team_formation[12]),
+                    create_player_info(m.home_team_formation[13]),
+                    create_player_info(m.home_team_formation[14]),
+                    create_player_info(m.home_team_formation[15]),
+                    create_player_info(m.home_team_formation[16]),
+                    create_player_info(m.home_team_formation[17]),
+                    create_player_info(m.home_team_formation[18]),
+                    create_player_info(m.home_team_formation[19]),
+                    create_player_info(m.home_team_formation[20]),
+                    create_player_info(m.home_team_formation[21])
                 ],
                 "lineup":[
                     create_player_info(m.away_team_formation[0]),
