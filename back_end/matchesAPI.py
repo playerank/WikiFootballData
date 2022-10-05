@@ -61,7 +61,6 @@ async def get_not_completed_match_list(n: int, token: str=Depends(oauth2_scheme)
     nc_matches=svc.get_not_completed_matches(n)
     return nc_matches
 
-#CAMBIA RESTITUENDO LISTA DEGLI ID
 @router.get("/get-id")
 async def get_match_id(home_team: str, away_team: str, season: str, competition_name: str, token: str=Depends(oauth2_scheme)):
     """
@@ -77,10 +76,8 @@ async def get_match_id(home_team: str, away_team: str, season: str, competition_
         return responses.JSONResponse(content={"message":f"away_team {away_team} is incorrect"},status_code=400)
     if id==4:
         return responses.JSONResponse(content={"message":"match doesn't exist"},status_code=400)
-    return {"message":f"id of the match={id}"}
-    #return id
-
-#AGGIUNGI FUNZIONE PER IL MATCH ID CON LA DATA
+    #return {"message":f"id of the match={id}"}
+    return id
 
 @router.post("/add")
 async def add_match(username: str, home_team: str, away_team: str, season: str, competition_name: str, round: str, date_str: str, link: HttpUrl, extended_time: bool, penalty: bool, token: str=Depends(oauth2_scheme)):
@@ -709,7 +706,6 @@ async def analyze_time_slot(username: str, match_id, data_index: int, token: str
         return responses.JSONResponse(content={"message":"time_slot is being analyzed by another user"},status_code=400)
     soccerLogger_json_input=json.dumps(result, indent=4)
     return soccerLogger_json_input
-    #return result QUESTO è GIUSTO
 
 @router.post("/add-detail")
 async def add_detail(username: str, match_id, data_index: int, detail: str, token: str=Depends(oauth2_scheme)):
@@ -720,7 +716,6 @@ async def add_detail(username: str, match_id, data_index: int, detail: str, toke
     This function should be called after "analyze_time_slot"
     """
     json_list_detail: List[Dict[str,Any]]=json.loads(detail)
-    #AGGIUNGERE CONTROLLI SUL TIPO?
     if data_index<0 or data_index>28:
         return responses.JSONResponse(content={"message":f"data_index {data_index} is incorrect"},status_code=400)
     result=svc.add_detail(username,match_id,data_index,json_list_detail)
