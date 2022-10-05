@@ -61,6 +61,7 @@ async def get_not_completed_match_list(n: int, token: str=Depends(oauth2_scheme)
     nc_matches=svc.get_not_completed_matches(n)
     return nc_matches
 
+#CAMBIA RESTITUENDO LISTA DEGLI ID
 @router.get("/get-id")
 async def get_match_id(home_team: str, away_team: str, season: str, competition_name: str, token: str=Depends(oauth2_scheme)):
     """
@@ -76,7 +77,10 @@ async def get_match_id(home_team: str, away_team: str, season: str, competition_
         return responses.JSONResponse(content={"message":f"away_team {away_team} is incorrect"},status_code=400)
     if id==4:
         return responses.JSONResponse(content={"message":"match doesn't exist"},status_code=400)
-    return id
+    return {"message":f"id of the match={id}"}
+    #return id
+
+#AGGIUNGI FUNZIONE PER IL MATCH ID CON LA DATA
 
 @router.post("/add")
 async def add_match(username: str, home_team: str, away_team: str, season: str, competition_name: str, round: str, date_str: str, link: HttpUrl, extended_time: bool, penalty: bool, token: str=Depends(oauth2_scheme)):
@@ -176,7 +180,7 @@ async def assess_officials_and_managers(match_id, username: str, token: str=Depe
     role=verify_role(username)
     if role!="A" and role!="E":
         return responses.JSONResponse(content={"message":"Forbidden Operation"},status_code=403)
-    result=svc.assess_off_and_man(username, match_id)
+    result=svc.assess_off_and_man(match_id, username)
     if result==1:
         return responses.JSONResponse(content={"message":"match_id is incorrect"},status_code=400)
     if result==2:
@@ -705,6 +709,7 @@ async def analyze_time_slot(username: str, match_id, data_index: int, token: str
         return responses.JSONResponse(content={"message":"time_slot is being analyzed by another user"},status_code=400)
     soccerLogger_json_input=json.dumps(result, indent=4)
     return soccerLogger_json_input
+    #return result QUESTO è GIUSTO
 
 @router.post("/add-detail")
 async def add_detail(username: str, match_id, data_index: int, detail: str, token: str=Depends(oauth2_scheme)):
