@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Any, Dict, List
 from bson import ObjectId
 from pydantic import HttpUrl
-from data.matches import Match, Analysis, create_info_dict
+from data.matches import Match, Analysis, create_info_dict, team_append
 from data.events import Event
 from data.rules import n
 from data.reviews import Review
@@ -137,10 +137,13 @@ def get_match_complete_info(match_id: ObjectId):
     if not m:
         return None
     info=dict()
+    c=get_competition_by_id(m.competition_id)
+    ht=get_team_by_id(m.home_team_id)
+    at=get_team_by_id(m.away_team_id)
     info={
-        "Competition":get_competition_by_id(m.competition_id),
-        "Home Team":get_team_by_id(m.home_team_id),
-        "Away Team":get_team_by_id(m.away_team_id),
+        "Competition":c.competition_name,
+        "Home Team":ht.team_name,
+        "Away Team":at.team_name,
         "Season":m.season,
         "Round":m.round,
         "Date":m.date_utc
@@ -155,25 +158,28 @@ def get_match_complete_info(match_id: ObjectId):
         info.update({"Match Name":"Confirmed"})
     else:
         info.update({"Match Name":"Not confirmed"})
-    info.update({
-        "Officials":m.officials,
-        "Home Manager":get_manager_by_id(m.home_manager_id),
-        "Away Manager":get_manager_by_id(m.away_manager_id)
-    })
+    info.update({"Officials":m.officials})
+    if m.home_manager_id and m.away_manager_id:
+        hm=get_manager_by_id(m.home_manager_id)
+        am=get_manager_by_id(m.away_manager_id)
+        info.update({
+            "Home Manager":hm.name,
+            "Away Manager":am.name
+        })
     if m.officials_and_managers_are_confirmed:
         info.update({"Officials and Managers":"Confirmed"})
     else:
         info.update({"Officials and Managers":"Not confirmed"})
     info.update({"Home Team Formation":m.home_team_formation})
     if m.home_formation_is_confirmed:
-        info.update({"Home Team": "Confirmed"})
+        info.update({"Home Team Formation is confirmed?": "Confirmed"})
     else:
-        info.update({"Home Team": "Not confirmed"})
+        info.update({"Home Team Formation is confirmed?": "Not confirmed"})
     info.update({"Away Team Formation":m.away_team_formation})
     if m.away_formation_is_confirmed:
-        info.update({"Away Team": "Confirmed"})
+        info.update({"Away Team Formation is confirmed?": "Confirmed"})
     else:
-        info.update({"Away Team": "Not confirmed"})
+        info.update({"Away Team Formation is confirmed?": "Not confirmed"})
     info.update({"Link":m.link})
     if m.link_is_confirmed:
         info.update({"Link confirm":"Confirmed"})
@@ -313,7 +319,11 @@ def add_team_formation(match_id: ObjectId, home: bool, player_names: List[str], 
         player_id=get_player_id(p)
         if not player_id:
             return p
-        match.team_append(home,player_id,p,player_numbers[i])
+        # print(home)
+        # print(player_id)
+        # print(p)
+        # print(player_numbers[i])
+        team_append(match,home,player_id,p,player_numbers[i])
         i+=1
     
     if home:
@@ -628,11 +638,12 @@ def get_free_time_slot(match_id: ObjectId):
     4 if the link is not confirmed, 5 if the officials and managers are not confirmed,
     6 and 7 if formations are not confirmed
     """
-    match:Match=Match.objects(id=match_id).only('link','data').first()
+    match=get_match(match_id)
     if not match:
         return 1
     if match.is_completed:
         return 2
+    print(match.is_confirmed)
     if not match.is_confirmed:
         return 3
     if not match.link_is_confirmed:
