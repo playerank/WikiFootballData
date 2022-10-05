@@ -19,7 +19,6 @@ app.include_router(competitionsAPI.router)
 app.include_router(teamsAPI.router)
 app.include_router(playersAPI.router)
 app.include_router(managersAPI.router)
-#ROBOMONGO sostituto di mongoDBcompass
 
 #cd '.\Progetto wikiFootballData\back_end\API'
 #uvicorn mainAPI:app --reload
