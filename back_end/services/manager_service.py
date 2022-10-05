@@ -52,6 +52,7 @@ def add_manager(manager_name: str, date_of_birth: datetime, nationality: str, cu
     manager.name=manager_name
     manager.date_of_birth=date_of_birth
     manager.nationality=nationality
+    manager.team_id=team_id
     manager.save()
     return 0
 
