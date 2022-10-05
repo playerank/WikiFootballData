@@ -104,5 +104,5 @@ async def get_online_user_list(username: str, n: int, token: str=Depends(oauth2_
     return online_user_list
 
 def get_user_n():
-    users=svc.get_users()
+    users=svc.get_users(0)
     return len(users)

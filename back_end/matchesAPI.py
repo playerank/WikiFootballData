@@ -61,6 +61,7 @@ async def get_not_completed_match_list(n: int, token: str=Depends(oauth2_scheme)
     nc_matches=svc.get_not_completed_matches(n)
     return nc_matches
 
+#CAMBIA RESTITUENDO LISTA DEGLI ID
 @router.get("/get-id")
 async def get_match_id(home_team: str, away_team: str, season: str, competition_name: str, token: str=Depends(oauth2_scheme)):
     """
@@ -78,6 +79,8 @@ async def get_match_id(home_team: str, away_team: str, season: str, competition_
         return responses.JSONResponse(content={"message":"match doesn't exist"},status_code=400)
     #return {"message":f"id of the match={id}"}
     return id
+
+#AGGIUNGI FUNZIONE PER IL MATCH ID CON LA DATA
 
 @router.post("/add")
 async def add_match(username: str, home_team: str, away_team: str, season: str, competition_name: str, round: str, date_str: str, link: HttpUrl, extended_time: bool, penalty: bool, token: str=Depends(oauth2_scheme)):
