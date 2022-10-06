@@ -2,4 +2,3 @@ fastapi
 mongoengine
 python-jose
 passlib
-Django
