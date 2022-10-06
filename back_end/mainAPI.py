@@ -20,7 +20,7 @@ app.include_router(teamsAPI.router)
 app.include_router(playersAPI.router)
 app.include_router(managersAPI.router)
 
-#cd '.\Progetto wikiFootballData\back_end\API'
+#cd '.\Progetto wikiFootballData\back_end'
 #uvicorn mainAPI:app --reload
 try:
     in_file=open('config.dat','rb')
